@@ -1,0 +1,3 @@
+# The browser playground is an auxiliary delivery surface around the MoonBit core.
+# Keep UI markup and localization volume from dominating repository language stats.
+ui/** -linguist-detectable
