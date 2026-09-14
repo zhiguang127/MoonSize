@@ -6,8 +6,6 @@ jobs:
   check:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
-    env:
-      MOON_HOME: ${{ runner.temp }}/moonsize-toolchain
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -15,6 +13,8 @@ jobs:
           node-version: '24'
       - name: Install pinned MoonBit and core
         run: |
+          export MOON_HOME="$RUNNER_TEMP/moonsize-toolchain"
+          echo "MOON_HOME=$MOON_HOME" >> "$GITHUB_ENV"
           bash scripts/setup-ci.sh
           echo "$MOON_HOME/bin" >> "$GITHUB_PATH"
       - name: Check and test core on four backends
