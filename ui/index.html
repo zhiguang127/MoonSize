@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MoonSize · Wasm 体积分析</title>
+<style>body{font-family:system-ui,sans-serif;background:#f3f6f9}main{max-width:1180px;margin:auto;padding:28px}</style>
+<main>
+  <div class="topline"><div class="brand">◔ Moon<span>Size</span> / Playground</div><span class="badge">LOCAL FILES · NO UPLOAD</span></div>
+  <h1>构建变大了，变在哪？</h1>
+  <p class="intro">选择 Wasm 文件，查看区段、可读函数名称和实际字节数。添加基准文件，比较变化并检查预算。分析在本地 Worker 中运行，每个文件最多 64 MiB，可随时取消；文件不会上传或执行。</p>
+  <div class="controls">
+    <label>当前构建 · 必选<input id="after" type="file" accept=".wasm"></label>
+    <label>基准构建 · 可选<input id="before" type="file" accept=".wasm"></label>
+    <label>总体积上限（字节，比较时生效）<input id="maxBytes" type="number" min="0" max="2147483647" step="1" placeholder="不限制"></label>
+    <label>增长上限（字节，比较时生效）<input id="maxGrowth" type="number" min="0" max="2147483647" step="1" placeholder="不限制"></label>
+    <div class="actions"><button id="analyze">分析文件</button><button id="case" class="secondary">载入 CommonMark 优化案例</button><button id="demo" class="secondary">载入微型构建示例</button><button id="cancel" class="secondary" disabled>取消分析</button><button id="download" class="secondary" disabled>导出 HTML</button><span id="status" role="status" aria-live="polite">请先选择文件，或载入示例。</span></div>
+  </div>
+  <div id="report"></div>
+</main>
+<script type="module" src="./app.mjs"></script>
+</html>
