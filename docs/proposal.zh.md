@@ -36,4 +36,4 @@ Twiggy 和 WABT 是真实替代工具。项目将重点验证 MoonBit 产物适�
 
 CommonMark 案例根据初始化函数占用进一步检查静态实体表，将通用 Json 表改为有序数组与二分查找。在相同 release / no-strip 参数下，679,991 B → 617,546 B（−9.18%）；两边都 strip 后仍减少 22,983 B。2,887 组输入在前后版本的 Wasm-GC 与 JS 上输出一致，相关上游测试通过。收益包括名称元数据，代码区段减少 22,853 B。
 
-实际证据见 README、docs/cases.zh.md 和 docs/validation.md。远端 CI 已配置但尚未运行；项目未发布，也没有把本地案例表述为上游采用。
+实际证据见 README、docs/cases.zh.md 和 docs/validation.md。远端 CI 已在提交 `4e10ce1` 上成功运行并上传证据；项目尚未发布到 Mooncakes 或 npm，也没有把本地案例表述为上游采用。

@@ -8,7 +8,7 @@
 - Upgrade JSON schema to 2. **Breaking correction:** present optional values are scalars / objects, not single-element arrays; absent values remain null. Add function `symbol` metadata.
 - Add pinned CommonMark and TOML case builds, reports, artifact hashes and upstream test logs. Verify an entity-table source optimization with 2,887 equal-output inputs across Wasm-GC and JS.
 - Enable local Windows Native verification with an isolated MinGW compiler wrapper; keep official runtime sources unchanged.
-- Extend Linux Actions to rebuild external cases and upload evidence. Remote execution and package publication are still pending.
+- Extend Linux Actions to rebuild external cases and upload evidence. The pinned workflow passed remotely on commit `4e10ce1`; package publication is still pending.
 
 ## 0.1.0 — local prototype
 

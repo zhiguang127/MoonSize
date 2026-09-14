@@ -61,4 +61,4 @@ cd D:\MoonSize
 - `cmark-optimization.patch`：生成器及查找函数的实际补丁。
 - `*.wasm` / `*.mjs`、分析 JSON、构建测试日志及上游许可证。
 
-这些文件由本地构建生成，默认不提交到 Git；GitHub Actions 已配置为重建并上传证据。尚未指定 MoonSize GitHub 仓库，因此没有远端运行链接。
+这些文件由本地构建生成，默认不提交到 Git；GitHub Actions 会重建并上传证据。2026-09-14，提交 `4e10ce1` 的远端运行 #3 成功并产生 `moonsize-evidence`；见 [Actions 页面](https://github.com/zhiguang127/MoonSize/actions)。

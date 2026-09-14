@@ -4,7 +4,7 @@
 
 分析 `.wasm` 的区段与函数体字节数，比较两次构建，并用体积预算检查增长。解析、比较、预算判断均由 MoonBit 实现；Node CLI 和浏览器界面负责文件读取与展示。
 
-当前为 **v0.2 本地版本**，尚未发布到 GitHub、Mooncakes 或 npm。新增 MoonBit 符号反修饰、可取消 Worker、统一资源限制，以及 CommonMark / TOML 两个外部项目案例。核心已在 JS、Wasm、Wasm-GC、Native 四个后端通过本地测试；远端 Actions 尚未运行。见 [验证记录](docs/validation.md)。
+当前为 **v0.2**，源码已推送到 GitHub，尚未发布到 Mooncakes 或 npm。新增 MoonBit 符号反修饰、可取消 Worker、统一资源限制，以及 CommonMark / TOML 两个外部项目案例。核心已在 JS、Wasm、Wasm-GC、Native 四个后端通过本地和远端测试。见 [验证记录](docs/validation.md)。
 
 CommonMark 的一次源码改动，在相同编译参数下将产物从 **679,991 B 降至 617,546 B（−9.18%）**；两边都 strip 后仍减少 22,983 B。2,887 组输入在前后版本、Wasm-GC 与 JS 上输出一致。见 [案例与复现说明](docs/cases.zh.md)。
 
@@ -37,7 +37,7 @@ python3 scripts/build-cases.py
 npm run serve
 ```
 
-CI 使用同版本的官方 Linux 工具链与 core，并校验固定 SHA-256；CI 文件已经准备好，尚未在远端运行。
+CI 使用同版本的官方 Linux 工具链与 core，并校验固定 SHA-256。2026-09-14，GitHub Actions 在 Ubuntu 24.04 上对提交 `4e10ce1` 成功运行并上传 `moonsize-evidence`；见 [Actions 页面](https://github.com/zhiguang127/MoonSize/actions)。
 
 ## 命令行
 
@@ -124,6 +124,6 @@ JSON schema 已升至 **2**：可选字段为直接值或 `null`，修复 v0.1 �
 
 [Twiggy](https://github.com/AlexEne/twiggy) 和 [WABT](https://github.com/WebAssembly/wabt) 是实际替代工具。本轮公开检索尚未发现定位完全相同的 MoonBit 原生产品，这不等于整个生态没有竞品。
 
-比赛演示可以完整展示「读入真实产物 → 定位初始化占用 → 修改静态表实现 → 验证行为 → 比较体积 → 预算检查」。下一步是远端 CI、独立使用反馈与发布。见 [项目申报草稿](docs/proposal.zh.md)、[后续安排](docs/roadmap.zh.md)。
+比赛演示可以完整展示「读入真实产物 → 定位初始化占用 → 修改静态表实现 → 验证行为 → 比较体积 → 预算检查」。远端 CI 已闭环；下一步是独立使用反馈、三分钟演示与发布准备。见 [项目申报草稿](docs/proposal.zh.md)、[后续安排](docs/roadmap.zh.md)。
 
 License: [Apache-2.0](LICENSE).

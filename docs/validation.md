@@ -1,6 +1,6 @@
 # 验证记录
 
-验证日期：2026-09-13。系统：Windows x86_64。核心使用官方 MoonBit core，不含第三方解析依赖。
+本地验证日期：2026-09-13，系统为 Windows x86_64；远端 Linux 验证日期：2026-09-14，运行于 GitHub Actions 的 Ubuntu 24.04。核心使用官方 MoonBit core，不含第三方解析依赖。
 
 ## 工具链
 
@@ -22,12 +22,14 @@
 | Windows `.\dev.ps1 native` | 35 / 35 通过，使用 MinGW 编译宏包装 |
 | Node 集成 / Worker 测试 | 14 / 14 通过 |
 | `npm run demo` | 8 个真实 MoonBit 编译产物解析成功、无元数据警告；Node `WebAssembly.validate` 全部通过 |
-| 远端 GitHub Actions | 已配置，尚未运行 |
+| 远端 GitHub Actions | 提交 `4e10ce1` 的运行 #3 成功，上传 1 个 `moonsize-evidence` artifact |
 | CommonMark 相关上游测试 | 优化前后各 261 / 261 通过 |
 | TOML 上游包测试 | 255 / 255 通过 |
 | CommonMark 输出对照 | 2,887 组输入在前后版本的 Wasm-GC / JS 上一致 |
 
 35 是测试块数量，并非完整规范覆盖率。检查包含 LEB 长度边界、区段内各截断点、v0 符号语法和安全回退、资源预算、固定种子的 500 次单字节变异、JSON 可选值形状、CLI 退出码/覆盖保护/HTML 转义，以及真实 Worker 的输入转移、结果一致性、取消终止、超时与错误清理。
+
+远端首次运行暴露了两个 CI 可移植性问题：job 级 `env` 不能引用 `runner.temp`，且固定的官方 Linux 工具链压缩包未给 `bin/` 下的原生工具保留执行位。工作流改为在 runner 步骤中使用 `RUNNER_TEMP`，安装脚本在哈希校验和解压后恢复原生工具执行权限。修复后的运行 #3 总耗时约 59 秒并成功上传证据；见 [Actions 页面](https://github.com/zhiguang127/MoonSize/actions)。
 
 v0.1 的 Native 失败发生在官方运行时 C 文件：MinGW 的 `rand_s` 声明需要在引入 stdlib.h 前定义 `_CRT_RAND_S`，而该版运行时的定义在引入之后。v0.2 的 `scripts/test-native.ps1` 生成本地编译器包装，在命令行补充该宏，并转发到现有 GCC / ar；官方运行时源码未修改。可单独运行 `.\dev.ps1 native`，或通过 `.\dev.ps1 test` 验证四个后端。本地 Native 通过不等于 Linux Actions 已通过。
 
@@ -47,4 +49,4 @@ v0.2 页面通过 Worker 分析 CommonMark 案例，显示当前 617,546 B、变
 
 外部项目证据通过 `.\dev.ps1 cases` / `python3 scripts/build-cases.py` 生成。`reports/cases/` 含源码提交、下载校验、构建命令、解析报告、实际优化补丁、二进制 SHA-256 和输出一致性哈希。结果与口径见 [案例说明](cases.zh.md)。
 
-报告只证明固定样例与语料上的结果，不代表所有 Wasm 提案、全部 MoonBit 应用或所有输入性能。尚无上游采用、远端 CI 运行、压缩体积或运行速度 benchmark 的证明。
+报告只证明固定样例与语料上的结果，不代表所有 Wasm 提案、全部 MoonBit 应用或所有输入性能。尚无上游采用、压缩体积或运行速度 benchmark 的证明。
