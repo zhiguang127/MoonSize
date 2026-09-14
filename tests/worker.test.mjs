@@ -32,7 +32,7 @@ test('cancel terminates pending work and discards late results',async()=>{
   const worker=new FakeWorker(),client=new AnalysisClient({workerFactory:()=>worker});
   worker.emit({type:'ready',limits:{}});await client.ready;
   const pending=client.run(null,empty.slice().buffer,-1,-1);
-  const rejected=assert.rejects(pending,{name:'AbortError'});
+  const rejected=assert.rejects(pending,{name:'AbortError',code:'cancelled'});
   client.cancel();worker.emit({type:'result',id:1,result:{ok:true}});
   await rejected;assert.equal(worker.terminated,true);assert.equal(client.closed,true);
 });
@@ -47,7 +47,7 @@ test('cancel aborts a request submitted to a real worker and waits for terminati
   try {
     await client.ready;
     const pending=client.run(null,empty.slice().buffer,-1,-1);
-    const rejected=assert.rejects(pending,{name:'AbortError'});
+    const rejected=assert.rejects(pending,{name:'AbortError',code:'cancelled'});
     client.cancel();await rejected;await termination;
     assert.equal(client.closed,true);
   }finally{client.close();await worker.terminate();}
@@ -55,12 +55,12 @@ test('cancel aborts a request submitted to a real worker and waits for terminati
 test('worker startup timeout rejects and releases the worker',async()=>{
   const worker=new FakeWorker();
   const client=new AnalysisClient({timeoutMs:10,workerFactory:()=>worker});
-  await assert.rejects(client.ready,{name:'AbortError'});
+  await assert.rejects(client.ready,{name:'AbortError',code:'analysisTimeout'});
   assert.equal(worker.terminated,true);
 });
 test('worker startup errors release resources',async()=>{
   const worker=new FakeWorker(),client=new AnalysisClient({workerFactory:()=>worker});
-  const rejected=assert.rejects(client.ready,{name:'AbortError'});
+  const rejected=assert.rejects(client.ready,{name:'AbortError',code:'workerFailed'});
   worker.onerror({preventDefault(){}});await rejected;
   assert.equal(worker.terminated,true);
 });

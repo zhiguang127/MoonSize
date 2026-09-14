@@ -20,14 +20,14 @@
 | `moon test --target wasm --deny-warn` | 35 / 35 通过 |
 | `moon test --target wasm-gc --deny-warn` | 35 / 35 通过 |
 | Windows `.\dev.ps1 native` | 35 / 35 通过，使用 MinGW 编译宏包装 |
-| Node 集成 / Worker 测试 | 14 / 14 通过 |
+| Node 集成 / Worker 测试 | 15 / 15 通过 |
 | `npm run demo` | 8 个真实 MoonBit 编译产物解析成功、无元数据警告；Node `WebAssembly.validate` 全部通过 |
 | 远端 GitHub Actions | 提交 `4e10ce1` 的运行 #3 成功，上传 1 个 `moonsize-evidence` artifact |
 | CommonMark 相关上游测试 | 优化前后各 261 / 261 通过 |
 | TOML 上游包测试 | 255 / 255 通过 |
 | CommonMark 输出对照 | 2,887 组输入在前后版本的 Wasm-GC / JS 上一致 |
 
-35 是测试块数量，并非完整规范覆盖率。检查包含 LEB 长度边界、区段内各截断点、v0 符号语法和安全回退、资源预算、固定种子的 500 次单字节变异、JSON 可选值形状、CLI 退出码/覆盖保护/HTML 转义，以及真实 Worker 的输入转移、结果一致性、取消终止、超时与错误清理。
+35 是核心测试块数量，并非完整规范覆盖率。检查包含 LEB 长度边界、区段内各截断点、v0 符号语法和安全回退、资源预算、固定种子的 500 次单字节变异、JSON 可选值形状、CLI 退出码/覆盖保护/HTML 转义、中英文报告渲染，以及真实 Worker 的输入转移、结果一致性、取消终止、超时与错误清理。
 
 远端首次运行暴露了两个 CI 可移植性问题：job 级 `env` 不能引用 `runner.temp`，且固定的官方 Linux 工具链压缩包未给 `bin/` 下的原生工具保留执行位。工作流改为在 runner 步骤中使用 `RUNNER_TEMP`，安装脚本在哈希校验和解压后恢复原生工具执行权限。修复后的运行 #3 总耗时约 59 秒并成功上传证据；见 [Actions 页面](https://github.com/zhiguang127/MoonSize/actions)。
 

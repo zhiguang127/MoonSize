@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {analyze_json,budget_json,compare_json} from '../_build/js/release/build/moonsize.js';
-import {renderReport} from '../ui/report.mjs';
+import {renderBody,renderReport} from '../ui/report.mjs';
 const header=[0,97,115,109,1,0,0,0];
 const empty=Uint8Array.from(header);
 const named=Uint8Array.from([...header,0,3,1,120,65]);
@@ -86,9 +86,27 @@ test('report escapes module controlled metadata and file labels',()=>{
   const a=JSON.parse(analyze_json(named));
   a.analysis.sections[0].custom_name='<img src=x onerror=alert(1)>';
   const html=renderReport(a,{input:'</script><script>alert(1)</script>'});
-  assert.equal(html.includes('<script>'),false);
+  assert.equal(html.includes('</script><script>alert(1)</script>'),false);
   assert.equal(html.includes('<img'),false);
   assert.match(html,/&lt;img/);
+});
+test('reports render complete English and Chinese variants',()=>{
+  const result=JSON.parse(budget_json(empty,named,12,4));
+  const files={before:'before.wasm',after:'after.wasm'};
+  const english=renderBody(result,files,'en');
+  assert.match(english,/See what changed\./);
+  assert.match(english,/Section changes/);
+  assert.match(english,/Total 13 bytes exceeds limit 12/);
+  const chinese=renderBody(result,files,'zh-CN');
+  assert.match(chinese,/看看哪里发生了变化。/);
+  assert.match(chinese,/区段变化/);
+  assert.match(chinese,/总量 13 字节超过上限 12/);
+  assert.doesNotMatch(chinese,/See what changed\.|Section changes/);
+  const standalone=renderReport(result,files,'zh-CN');
+  assert.match(standalone,/<html lang="zh-CN">/);
+  assert.match(standalone,/data-report-locale="en" hidden/);
+  assert.match(standalone,/data-report-locale="zh"/);
+  assert.match(standalone,/data-switch-locale="en"/);
 });
 test('deterministic mutation corpus produces bounded reports or errors, never throws',()=>{
   const source=Uint8Array.from([...header,1,4,1,96,0,0,3,2,1,0,10,4,1,2,0,11]);

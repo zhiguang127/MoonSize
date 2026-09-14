@@ -4,6 +4,7 @@
 
 - Decode MoonBit v0 symbols using the pinned runtime grammar; retain raw names and mark unsupported symbols. Expose only explicitly encoded package labels.
 - Move browser analysis to disposable Workers with transferable input, cancellation, stale-result protection and a 30-second timeout.
+- Add a persistent Chinese / English switch for the browser UI and self-contained bilingual HTML reports.
 - Enforce shared input, section, function and metadata budgets in the MoonBit core; expose machine-readable resource errors and limits.
 - Upgrade JSON schema to 2. **Breaking correction:** present optional values are scalars / objects, not single-element arrays; absent values remain null. Add function `symbol` metadata.
 - Add pinned CommonMark and TOML case builds, reports, artifact hashes and upstream test logs. Verify an entity-table source optimization with 2,887 equal-output inputs across Wasm-GC and JS.

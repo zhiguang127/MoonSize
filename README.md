@@ -21,7 +21,7 @@ cd D:\MoonSize
 .\dev.ps1 serve
 ```
 
-浏览器访问 <http://127.0.0.1:4173/ui/>，点击「载入 CommonMark 优化案例」，或选择自己的文件。HTML 报告位于 `reports/cases/cmark-report.html` 和 `reports/cases/toml-report.html`，可直接打开。默认服务仅监听本机，文件选择不会上传内容。`cases` 首次运行需要网络和 Python 3.10+，会校验两个上游源码压缩包的 SHA-256。
+浏览器访问 <http://127.0.0.1:4173/ui/>，点击「载入 CommonMark 优化案例」，或选择自己的文件。右上角可切换中文 / English，选择会保存在当前浏览器；分析结果和导出的离线 HTML 会同步切换，独立 HTML 报告也自带语言按钮。报告位于 `reports/cases/cmark-report.html` 和 `reports/cases/toml-report.html`，可直接打开。默认服务仅监听本机，文件选择不会上传内容。`cases` 首次运行需要网络和 Python 3.10+，会校验两个上游源码压缩包的 SHA-256。
 
 本机 `test` 包含四个核心后端。Windows Native 使用检测到的 MinGW，并通过临时编译器包装补充 `_CRT_RAND_S` 宏；不会修改官方运行时或系统 PATH。也可单独运行 `.\dev.ps1 native`。
 
@@ -88,7 +88,7 @@ JSON schema 已升至 **2**：可选字段为直接值或 `null`，修复 v0.1 �
 
 ## 已完成与边界
 
-已完成：核心文件头检查、区段和函数体边界检查、32-bit LEB 长度检查、UTF-8 自定义名称、可读函数符号、确定性比较、预算、CLI、JSON、HTML 报告、Worker 演示、真实项目案例与 CI 配置。
+已完成：核心文件头检查、区段和函数体边界检查、32-bit LEB 长度检查、UTF-8 自定义名称、可读函数符号、确定性比较、预算、CLI、JSON、中英双语 HTML 报告、Worker 演示、真实项目案例与 CI 配置。
 
 首版仅分析 core Wasm version 1，包括已经实测的 MoonBit Wasm-GC 产物。它**不是完整 Wasm 验证器**：不解析指令，不验证所有区段内容、类型关系或规范顺序；能分析的文件不等于能执行的有效模块。未知区段保留并警告，可选名称/导入元数据损坏会降级为警告。Component Model 文件不支持。
 

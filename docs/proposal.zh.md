@@ -32,7 +32,7 @@ Twiggy 和 WABT 是真实替代工具。项目将重点验证 MoonBit 产物适�
 
 ## 验收证据
 
-核心在 Wasm、Wasm-GC、JS、Native 四个后端通过本地测试，CLI / Worker 提供 14 项集成测试。固定两个外部项目提交：CommonMark 与 TOML；提供命令、哈希、构建日志和离线报告。
+核心在 Wasm、Wasm-GC、JS、Native 四个后端通过本地测试，CLI / Worker 提供 15 项集成测试。固定两个外部项目提交：CommonMark 与 TOML；提供命令、哈希、构建日志和中英双语离线报告。
 
 CommonMark 案例根据初始化函数占用进一步检查静态实体表，将通用 Json 表改为有序数组与二分查找。在相同 release / no-strip 参数下，679,991 B → 617,546 B（−9.18%）；两边都 strip 后仍减少 22,983 B。2,887 组输入在前后版本的 Wasm-GC 与 JS 上输出一致，相关上游测试通过。收益包括名称元数据，代码区段减少 22,853 B。
 
