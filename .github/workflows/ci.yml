@@ -1,0 +1,41 @@
+name: MoonSize checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      MOON_HOME: ${{ runner.temp }}/moonsize-toolchain
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install pinned MoonBit and core
+        run: |
+          bash scripts/setup-ci.sh
+          echo "$MOON_HOME/bin" >> "$GITHUB_PATH"
+      - name: Check and test core on four backends
+        run: |
+          moon check --target all --deny-warn
+          for target in wasm wasm-gc js native; do
+            moon test --target "$target" --deny-warn
+          done
+      - name: Test CLI and build real Wasm fixtures
+        run: |
+          npm test
+          npm run demo
+      - name: Reproduce pinned external cases and optimization
+        run: python3 scripts/build-cases.py
+      - name: Upload reports and fixture manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: moonsize-evidence
+          path: |
+            reports/demo/*.wasm
+            reports/demo/*.html
+            reports/demo/manifest.json
+            reports/cases/
