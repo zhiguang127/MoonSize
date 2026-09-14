@@ -1,0 +1,8 @@
+_build/
+target/
+dist/
+node_modules/
+reports/
+.DS_Store
+.tools/
+.local/

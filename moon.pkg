@@ -1,0 +1,17 @@
+import {
+  "moonbitlang/core/encoding/utf8",
+}
+
+options(
+  link: {
+    "js": {
+      "exports": [
+        "analyze_json",
+        "compare_json",
+        "budget_json",
+        "limits_json",
+      ],
+      "format": "esm",
+    },
+  },
+)

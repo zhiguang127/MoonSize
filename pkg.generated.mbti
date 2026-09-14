@@ -1,0 +1,115 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "juvenile/moonsize"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn analyze(Bytes) -> Analysis raise ParseError
+
+pub fn analyze_json(Bytes) -> String
+
+pub fn budget_json(Bytes, Bytes, Int, Int) -> String
+
+pub fn check_budget(Comparison, max_bytes? : Int, max_growth_bytes? : Int) -> Budget raise ParseError
+
+pub fn compare(Analysis, Analysis) -> Comparison
+
+pub fn compare_json(Bytes, Bytes) -> String
+
+pub fn decode_symbol(String) -> Symbol
+
+pub fn limits_json() -> String
+
+pub let max_functions : Int
+
+pub let max_input_bytes : Int
+
+pub let max_metadata_entries : Int
+
+pub let max_name_bytes : Int
+
+pub let max_sections : Int
+
+pub let max_total_name_bytes : Int
+
+// Errors
+pub suberror ParseError {
+  Invalid(Int, String)
+  ResourceLimit(Int, String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) struct Analysis {
+  schema_version : Int
+  total_bytes : Int
+  module_header_bytes : Int
+  sections : Array[Section]
+  functions : Array[FunctionBody]
+  warnings : Array[String]
+} derive(ToJson, @debug.Debug)
+
+pub(all) struct Budget {
+  passed : Bool
+  actual_bytes : Int
+  growth_bytes : Int
+  max_bytes : Int?
+  max_growth_bytes : Int?
+  violations : Array[String]
+} derive(@debug.Debug)
+pub impl ToJson for Budget
+
+pub(all) struct Comparison {
+  schema_version : Int
+  before_bytes : Int
+  after_bytes : Int
+  delta_bytes : Int
+  sections : Array[SectionDelta]
+} derive(ToJson, @debug.Debug)
+
+pub(all) struct FunctionBody {
+  ordinal : Int
+  function_index : Int?
+  name : String?
+  symbol : Symbol?
+  offset : Int
+  body_bytes : Int
+  prefix_bytes : Int
+  total_bytes : Int
+} derive(@debug.Debug)
+pub impl ToJson for FunctionBody
+
+pub(all) struct Section {
+  id : Int
+  label : String
+  custom_name : String?
+  offset : Int
+  header_bytes : Int
+  payload_bytes : Int
+  total_bytes : Int
+} derive(@debug.Debug)
+pub impl ToJson for Section
+
+pub(all) struct SectionDelta {
+  id : Int
+  label : String
+  custom_name : String?
+  before_bytes : Int
+  after_bytes : Int
+  delta_bytes : Int
+} derive(@debug.Debug)
+pub impl ToJson for SectionDelta
+
+pub(all) struct Symbol {
+  raw : String
+  display : String
+  package_name : String?
+  status : String
+  kind : String
+} derive(@debug.Debug)
+pub impl ToJson for Symbol
+
+// Type aliases
+
+// Traits

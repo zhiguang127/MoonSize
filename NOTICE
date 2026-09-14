@@ -1,0 +1,25 @@
+MoonSize
+Copyright 2026 MoonSize contributors
+Licensed under Apache License 2.0 (see LICENSE).
+
+symbols.mbt adapts the v0 symbol grammar and decoding approach from
+MoonBit lib/runtime/backtrace.c, distributed in moonc v0.10.12+1634b282e.
+Original copyright: 2026 International Digital Economy Academy.
+Original license: Apache License 2.0.
+Changes: implemented in MoonBit with bounded recursion/input, whole-input
+validation, structured output and unsupported-symbol fallback.
+Official distribution: https://www.moonbitlang.com/download/
+
+cases/cmark/gen_entities.py and cases/cmark/html.mbt adapt the corresponding
+src/char files of moonbit-community/cmark at
+ebf47ab9efcbd2ecff6f6ec8656c06a308395729 (Apache License 2.0).
+Changes: sorted parallel arrays and binary-search lookup for the local size
+experiment. Source: https://github.com/moonbit-community/cmark
+The CommonMark specification used by the verification script is attributed
+in the pinned upstream source to John MacFarlane, CC-BY-SA 4.0. It is downloaded
+as test input; the generated reports publish measurements and hashes, not the
+specification text. Upstream project licenses are copied into reports/cases.
+
+Third-party project artifacts are local reproducibility fixtures, not part of
+the MoonSize analysis library. Their upstream dependency licenses continue
+to apply. No upstream endorsement or adoption is implied.
