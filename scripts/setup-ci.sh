@@ -11,6 +11,8 @@ printf '%s  %s\n' '9bbda7d342fa39654a65c23805e5ff5a3915a26b36627a2565a6b1a99d099
 printf '%s  %s\n' '784a12ce4e204a3a98a0b704a021f747b916412efacd4dfe2f4e5c27ae183ac1' "$download_dir/core.tar.gz" | sha256sum --check
 tar xzf "$download_dir/moonbit.tar.gz" -C "$MOON_HOME"
 tar xzf "$download_dir/core.tar.gz" -C "$MOON_HOME/lib"
+# The pinned Linux archive ships native tools without executable bits.
+find "$MOON_HOME/bin" -type f ! -name '*.wasm' -exec chmod a+x {} +
 export PATH="$MOON_HOME/bin:$PATH"
 moon -C "$MOON_HOME/lib/core" bundle --all --warn-list -a
 moon version --all
