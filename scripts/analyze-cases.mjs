@@ -13,9 +13,12 @@ async function analyze(file){
   const a=result.analysis;
   assert.equal(a.module_header_bytes+a.sections.reduce((n,s)=>n+s.total_bytes,0),data.length);
   assert.deepEqual(a.warnings,[]);
+  assert.deepEqual(a.references.issues,[],`${file}: reference decoding issues`);
+  assert.equal(a.references.decoded_functions,a.functions.length);
   await writeFile(new URL(file+'.json',dir),JSON.stringify(result,null,2)+'\n');
   const stats={file,bytes:data.length,sha256:sha(data),functions:a.functions.length,symbols:{},top_functions:a.functions.toSorted((a,b)=>b.total_bytes-a.total_bytes||a.ordinal-b.ordinal).slice(0,10).map(f=>({bytes:f.total_bytes,symbol:f.symbol?.display??null}))};
   for(const f of a.functions){const status=f.symbol?.status??'absent';stats.symbols[status]=(stats.symbols[status]??0)+1;}
+  stats.references={decoded_functions:a.references.decoded_functions,edges:a.references.edges.length,dynamic_calls:a.references.dynamic_references.length};
   return {data,result,stats};
 }
 const before=await analyze('cmark-before.wasm');
@@ -25,6 +28,8 @@ if(process.argv.includes('--baseline')){
 const after=await analyze('cmark-after.wasm'),toml=await analyze('toml-cli.wasm');
 const strippedBefore=await analyze('cmark-before-stripped.wasm'),strippedAfter=await analyze('cmark-after-stripped.wasm');
 const diff=JSON.parse(compare_json(before.data,after.data));assert.ok(diff.ok);
+assert.equal(diff.comparison.packages.reduce((n,p)=>n+p.before_bytes,0),diff.comparison.matching.before.total_bytes);
+assert.equal(diff.comparison.packages.reduce((n,p)=>n+p.after_bytes,0),diff.comparison.matching.after.total_bytes);
 await writeFile(new URL('cmark-diff.json',dir),JSON.stringify(diff,null,2)+'\n');
 await writeFile(new URL('cmark-report.html',dir),renderReport(diff,{before:'cmark-before.wasm',after:'cmark-after.wasm'}));
 await writeFile(new URL('toml-report.html',dir),renderReport(toml.result,{input:'toml-cli.wasm'}));

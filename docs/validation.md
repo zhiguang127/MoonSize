@@ -50,3 +50,24 @@ v0.2 页面通过 Worker 分析 CommonMark 案例，显示当前 617,546 B、变
 外部项目证据通过 `.\dev.ps1 cases` / `python3 scripts/build-cases.py` 生成。`reports/cases/` 含源码提交、下载校验、构建命令、解析报告、实际优化补丁、二进制 SHA-256 和输出一致性哈希。结果与口径见 [案例说明](cases.zh.md)。
 
 报告只证明固定样例与语料上的结果，不代表所有 Wasm 提案、全部 MoonBit 应用或所有输入性能。尚无上游采用、压缩体积或运行速度 benchmark 的证明。
+
+## 2026-09-18：L2 / L3 本地验证
+
+环境为 Linux x86_64，继续使用上文固定的 MoonBit 编译器，Node.js 24.19.0。工具链由 `scripts/setup-ci.sh` 下载并通过仓库记录的 SHA-256 校验。
+
+| 检查 | 结果 |
+| --- | --- |
+| `moon check --target all --deny-warn` | 通过 |
+| JS / Wasm / Wasm-GC / Native 核心测试 | 每个后端 53 / 53 通过 |
+| `npm test` 中 Node 集成 / 归因 / Worker 测试 | 26 / 26 通过 |
+| `npm run demo` | 8 个真实产物通过引擎校验，全部函数体引用解码成功 |
+| `python3 scripts/build-cases.py` | CommonMark / TOML 构建、上游测试、引用解码及 2,887 组行为对照通过 |
+| 本地 Chrome 在线页面 | Worker 加载、函数搜索、变化筛选、分页、前后构建选择、引用跳转和语言切换通过 |
+| 下载后的离线 HTML | 通过真实浏览器下载并重新打开，搜索 / 分页 / 引用跳转 / 语言切换通过 |
+| 移动端 390 px 视口 | 页面无横向溢出，引用路径与列表可读 |
+
+核心与集成新增检查包括：重排函数索引、唯一原始符号匹配、缺名称和双侧重名、单侧符号、未知包核算、显式 null、code 区段开销、导入偏移、递归与无根环、export / start 路径、8 种 element 编码、global / table 初始化、Wasm-GC、SIMD、内存立即数、尾调用及动态调用。有效合成样例通过 Node `WebAssembly.validate` 独立核对；某些核心解码边界样例有意不满足完整 Wasm 类型规则。
+
+未知指令或不完整元数据区域不会泄漏部分引用；引用条数和控制嵌套超限返回资源错误。2,000 函数链验证前驱森林的线性存储与路径重建；真实 Worker 验证 schema 3 比较结果与直接核心调用一致。在线与离线报告均检查了模块名称的 HTML / script 转义。浏览器验证期间未发现页面脚本错误。
+
+CommonMark 浏览器复验能搜索 `__moonbit_init`，看到 **−21,229 B** 的函数级变化并跳转到其引用路径。完整匹配和引用统计见 [案例说明](cases.zh.md)。这些是本地验证结果，尚未运行新代码的远端 Actions；没有据此承诺任意 64 MiB 输入在 30 秒内完成。

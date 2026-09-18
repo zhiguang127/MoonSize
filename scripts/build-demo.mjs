@@ -41,9 +41,10 @@ for (const version of ['before','after']) {
       const a = result.analysis;
       if (a.module_header_bytes+a.sections.reduce((n,s)=>n+s.total_bytes,0)!==data.length) throw new Error('Section accounting mismatch');
       if (a.warnings.length) throw new Error(`${filename}: ${a.warnings.join('; ')}`);
+      if (a.references.issues.length || a.references.decoded_functions !== a.functions.length) throw new Error(`${filename}: incomplete reference decoding: ${JSON.stringify(a.references.issues)}`);
       const engineValid = WebAssembly.validate(data);
       if (!engineValid) throw new Error(`${filename}: Node's WebAssembly validator rejected compiler output`);
-      manifest.fixtures.push({file:filename,target,names,bytes:data.length,functions:a.functions.length,named_functions:a.functions.filter(f=>f.name!==null).length,engine_validated:engineValid,sha256:createHash('sha256').update(data).digest('hex')});
+      manifest.fixtures.push({file:filename,target,names,bytes:data.length,functions:a.functions.length,named_functions:a.functions.filter(f=>f.name!==null).length,references:{decoded_functions:a.references.decoded_functions,edges:a.references.edges.length,dynamic_calls:a.references.dynamic_references.length},engine_validated:engineValid,sha256:createHash('sha256').update(data).digest('hex')});
       if (target==='wasm' && names) await copyFile(dest,path.join(output,`${version}.wasm`));
       console.log(`${filename}: ${data.length} B, ${a.functions.length} functions, warnings=0`);
     }

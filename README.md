@@ -2,9 +2,9 @@
 
 **MoonBit 原生 WebAssembly 体积分析与构建回归工具。**
 
-分析 `.wasm` 的区段与函数体字节数，比较两次构建，并用体积预算检查增长。解析、比较、预算判断均由 MoonBit 实现；Node CLI 和浏览器界面负责文件读取与展示。
+分析 `.wasm` 的区段与函数体字节数，按包和唯一原始符号比较两次构建，追踪直接调用、函数引用和已知包含路径，并用体积预算检查增长。解析、比较、引用图与预算判断均由 MoonBit 实现；Node CLI 和浏览器界面负责文件读取与展示。
 
-当前为 **v0.2**，源码已推送到 GitHub，尚未发布到 Mooncakes 或 npm。新增 MoonBit 符号反修饰、可取消 Worker、统一资源限制，以及 CommonMark / TOML 两个外部项目案例。核心已在 JS、Wasm、Wasm-GC、Native 四个后端通过本地和远端测试。见 [验证记录](docs/validation.md)。
+当前在 v0.2 基础上开发 **L2 / L3（未发布，JSON schema 3）**，尚未发布到 Mooncakes 或 npm。新增 MoonBit 符号反修饰、可取消 Worker、统一资源限制，以及 CommonMark / TOML 两个外部项目案例。核心已在 JS、Wasm、Wasm-GC、Native 四个后端通过本地和远端测试。见 [验证记录](docs/validation.md)。
 
 CommonMark 的一次源码改动，在相同编译参数下将产物从 **679,991 B 降至 617,546 B（−9.18%）**；两边都 strip 后仍减少 22,983 B。2,887 组输入在前后版本、Wasm-GC 与 JS 上输出一致。见 [案例与复现说明](docs/cases.zh.md)。
 
@@ -44,6 +44,7 @@ CI 使用同版本的官方 Linux 工具链与 core，并校验固定 SHA-256。
 ```sh
 node bin/moonsize.mjs analyze app.wasm
 node bin/moonsize.mjs analyze app.wasm --json
+node bin/moonsize.mjs analyze app.wasm --why 42
 node bin/moonsize.mjs diff before.wasm after.wasm --html report.html
 node bin/moonsize.mjs diff before.wasm after.wasm --max-bytes 32000 --max-growth 30000 --json
 ```
@@ -75,7 +76,7 @@ let budget = @moonsize.check_budget(
 
 `analyze` 可能抛出 `ParseError::Invalid(offset, message)` 或 `ResourceLimit(offset, message)`；`check_budget` 会拒绝无效预算。公共类型与接口见 [pkg.generated.mbti](pkg.generated.mbti)。JS 导出 `analyze_json`、`compare_json`、`budget_json` 和 `limits_json`，分析接口接收 `Uint8Array` 并返回 JSON 字符串。Bridge 中 `-1` 代表未设置预算，其他负数无效。
 
-JSON schema 已升至 **2**：可选字段为直接值或 `null`，修复 v0.1 中 `Some` 意外输出为单元素数组的问题。函数新增 `symbol: {raw, display, package_name, status, kind} | null`。`decode_symbol` 依据固定编译器的 v0 名称语法，保留原符号，并区分 `decoded`、`plain`、`unsupported`。包名只在符号明确编码时提供，不代表源码映射；未来版本或不支持的语法安全回退到原文。来源见 [NOTICE](NOTICE)。
+JSON schema 已升至 **3**：新增 `analysis.references`，以及 `comparison.packages`、`functions`、`matching` 和 `code_overhead_delta_bytes`。完整字段与语义见 [L2 / L3 接口说明](docs/analysis-l2-l3.zh.md)。此前 schema 2 的约定保持：可选字段为直接值或 `null`，修复 v0.1 中 `Some` 意外输出为单元素数组的问题。函数新增 `symbol: {raw, display, package_name, status, kind} | null`。`decode_symbol` 依据固定编译器的 v0 名称语法，保留原符号，并区分 `decoded`、`plain`、`unsupported`。包名只在符号明确编码时提供，不代表源码映射；未来版本或不支持的语法安全回退到原文。来源见 [NOTICE](NOTICE)。
 
 ## 测量口径
 
@@ -83,14 +84,16 @@ JSON schema 已升至 **2**：可选字段为直接值或 `null`，修复 v0.1 �
 - `function.total_bytes = body_bytes + prefix_bytes`。函数体是 code 区段内部的细分，**不能再加到文件总大小上**。
 - 自定义区段按名称展示；比较时，同名的多个自定义区段聚合求和。标准区段与同名自定义区段不会混淆。
 - 函数名称来自可选 `name` 区段，计入导入函数对全局索引的偏移。导入元数据无法解析时省略索引与名称并给出警告；仍保留精确的区段字节数。
-- 跨构建只比较总量与区段。不把函数索引当成稳定身份，也不按可能重名的函数名自动匹配。
+- 跨构建比较总量、区段、按符号归属的函数体包汇总，以及两侧唯一且非空的原始函数名称。函数索引只用于单个构建内的引用图，不作为跨构建身份；重名和无名称项保留为未匹配。
+- 函数变化分为增大、缩小、大小相同、新增符号、消失符号及双侧未匹配。大小相同不代表行为相同，新增 / 消失符号不证明源码新增 / 删除。包汇总包含未知归属，并不代表依赖全部成本。
+- 匹配覆盖率分别统计前后构建的函数数量与函数体字节数。函数体汇总与 code 区段的差额是区段头和函数数量编码；完整区段总量仍严格核对文件长度。
 - 所有数值都是原始二进制字节，不是 gzip/Brotli 大小、内存占用、retained size 或可删除体积。
 
 ## 已完成与边界
 
 已完成：核心文件头检查、区段和函数体边界检查、32-bit LEB 长度检查、UTF-8 自定义名称、可读函数符号、确定性比较、预算、CLI、JSON、中英双语 HTML 报告、Worker 演示、真实项目案例与 CI 配置。
 
-首版仅分析 core Wasm version 1，包括已经实测的 MoonBit Wasm-GC 产物。它**不是完整 Wasm 验证器**：不解析指令，不验证所有区段内容、类型关系或规范顺序；能分析的文件不等于能执行的有效模块。未知区段保留并警告，可选名称/导入元数据损坏会降级为警告。Component Model 文件不支持。
+当前仅分析 core Wasm version 1，包括已经实测的 MoonBit Wasm-GC 产物。它**不是完整 Wasm 验证器**：为引用分析解码支持的指令及立即数，但不验证所有区段内容、类型关系或规范顺序；能分析的文件不等于能执行的有效模块。未知区段保留并警告，可选名称/导入元数据损坏会降级为警告。Component Model 文件不支持。
 
 核心、CLI、Worker 共用以下限制。CLI 在分配输入缓冲前检查文件大小，浏览器在读取所选文件前检查大小；核心在解析入口复核。资源超限返回 `resource_limit`，不会作为可选元数据警告吞掉。
 
@@ -102,8 +105,12 @@ JSON schema 已升至 **2**：可选字段为直接值或 `null`，修复 v0.1 �
 | 解析的导入 / 名称元数据条目 | 100,000 |
 | 单个解析名称 | 4,096 UTF-8 字节 |
 | 累计解析名称 | 4 MiB |
+| 引用边、根和动态调用记录（含失败区域已扫描记录） | 200,000 |
+| 控制结构栈深度（含函数隐式根） | 4,096 |
 
-浏览器每次分析创建独立 Worker，输入缓冲转移给 Worker；取消、错误或 30 秒超时会终止 Worker，过期结果不会覆盖新报告。报告只展示前 100 个区段行和前 15 个函数，JSON 保留完整结果。限制用于约束工作量，不构成峰值内存或全部恶意输入性能承诺。source map、调用图、自动优化和压缩大小尚未实现。
+浏览器每次分析创建独立 Worker，输入缓冲转移给 Worker；取消、错误或 30 秒超时会终止 Worker，过期结果不会覆盖新报告。区段概览展示前 100 行，最大函数概览展示前 15 个函数。包级 / 函数级 diff 可分页，函数可搜索和按变化类型筛选；引用浏览器可切换基准 / 当前构建，查看直接调用者、被调用者、其他引用及已知包含路径。路径和引用列表最多展示 50 项，JSON 保留完整证据；离线 HTML 同样支持交互。限制用于约束工作量，不构成峰值内存或全部恶意输入性能承诺。
+
+引用分析支持标准数值、内存、bulk memory、SIMD、Wasm-GC、尾调用与类型化函数引用的指令编码，以及 export、start、global / table 初始化和 8 种 element 段编码。`call_indirect` / `call_ref` 的目标保留未知，观察到的表成员仅是可能目标。未知或损坏指令使对应区域降级，错误记录在 `references.issues`；精确字节核算仍保留。没有已知路径不等于未使用，不计算 retained / removable size。source map、自动优化和压缩大小尚未实现。
 
 ## 真实构建示例
 

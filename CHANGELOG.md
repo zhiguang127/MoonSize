@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — L2 / L3
+
+- Upgrade analysis/comparison JSON to schema 3. Add symbol-owned package deltas, unique raw-name function matching, one-sided symbol and unresolved categories, and separate count/byte coverage for each build.
+- Decode instruction framing for direct calls, tail calls and function references, including Wasm-GC and SIMD; inspect exports, start, table/global initializers and element segments. Preserve unresolved indirect/typed calls and explicit regional decode issues.
+- Expose a bounded reference graph, callers/callees and a linear predecessor forest for inclusion paths; no dead-code or removable-size claims. Add the MoonBit `inclusion_path` API and CLI `--why INDEX`.
+- Add searchable, paginated bilingual attribution reports and reference navigation in live and offline HTML. Fix missing i18n module routes in the preview server.
+- Bound reference records and control nesting; add engine-validated fixtures, ambiguity and malformed-input regressions, resource-limit tests and real Worker coverage.
+
 ## 0.2.0 — local implementation, 2026-09-13
 
 - Decode MoonBit v0 symbols using the pinned runtime grammar; retain raw names and mark unsupported symbols. Expose only explicitly encoded package labels.
