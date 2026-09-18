@@ -20,7 +20,11 @@ pub fn compare_json(Bytes, Bytes) -> String
 
 pub fn decode_symbol(String) -> Symbol
 
+pub fn inclusion_path(ReferenceGraph, Int) -> InclusionPath
+
 pub fn limits_json() -> String
+
+pub let max_control_depth : Int
 
 pub let max_functions : Int
 
@@ -29,6 +33,8 @@ pub let max_input_bytes : Int
 pub let max_metadata_entries : Int
 
 pub let max_name_bytes : Int
+
+pub let max_reference_entries : Int
 
 pub let max_sections : Int
 
@@ -47,6 +53,7 @@ pub(all) struct Analysis {
   module_header_bytes : Int
   sections : Array[Section]
   functions : Array[FunctionBody]
+  references : ReferenceGraph
   warnings : Array[String]
 } derive(ToJson, @debug.Debug)
 
@@ -66,7 +73,21 @@ pub(all) struct Comparison {
   after_bytes : Int
   delta_bytes : Int
   sections : Array[SectionDelta]
+  packages : Array[PackageDelta]
+  functions : Array[FunctionDelta]
+  matching : MatchingCoverage
+  code_overhead_delta_bytes : Int
 } derive(ToJson, @debug.Debug)
+
+pub(all) struct DynamicReference {
+  source_kind : String
+  source_index : Int
+  kind : String
+  offset : Int
+  table_index : Int?
+  type_index : Int?
+} derive(@debug.Debug)
+pub impl ToJson for DynamicReference
 
 pub(all) struct FunctionBody {
   ordinal : Int
@@ -79,6 +100,87 @@ pub(all) struct FunctionBody {
   total_bytes : Int
 } derive(@debug.Debug)
 pub impl ToJson for FunctionBody
+
+pub(all) struct FunctionDelta {
+  before : FunctionBody?
+  after : FunctionBody?
+  match_kind : String
+  confidence : String
+  change : String
+  reason : String
+  delta_bytes : Int?
+} derive(@debug.Debug)
+pub impl ToJson for FunctionDelta
+
+pub(all) struct InclusionPath {
+  status : String
+  root : ReferenceRoot?
+  edges : Array[ReferenceEdge]
+} derive(@debug.Debug)
+pub impl ToJson for InclusionPath
+
+pub(all) struct MatchingCoverage {
+  before : SideCoverage
+  after : SideCoverage
+  exact_matches : Int
+  inferred_matches : Int
+} derive(ToJson, @debug.Debug)
+
+pub(all) struct PackageDelta {
+  package_name : String?
+  before_bytes : Int
+  after_bytes : Int
+  delta_bytes : Int
+  before_functions : Int
+  after_functions : Int
+} derive(@debug.Debug)
+pub impl ToJson for PackageDelta
+
+pub(all) struct ReferenceEdge {
+  source_kind : String
+  source_index : Int
+  target : Int
+  kind : String
+  offset : Int
+  table_index : Int?
+} derive(@debug.Debug)
+pub impl ToJson for ReferenceEdge
+
+pub(all) struct ReferenceGraph {
+  status : String
+  decoded_functions : Int
+  total_functions : Int
+  nodes : Array[ReferenceNode]
+  edges : Array[ReferenceEdge]
+  roots : Array[ReferenceRoot]
+  dynamic_references : Array[DynamicReference]
+  issues : Array[ReferenceIssue]
+} derive(ToJson, @debug.Debug)
+
+pub(all) struct ReferenceIssue {
+  source_kind : String
+  source_index : Int
+  offset : Int
+  message : String
+} derive(ToJson, @debug.Debug)
+
+pub(all) struct ReferenceNode {
+  function_index : Int
+  name : String?
+  scan_status : String
+  incoming : Array[Int]
+  outgoing : Array[Int]
+  root_index : Int?
+  parent_edge : Int?
+} derive(@debug.Debug)
+pub impl ToJson for ReferenceNode
+
+pub(all) struct ReferenceRoot {
+  kind : String
+  name : String
+  function_index : Int
+  offset : Int
+} derive(ToJson, @debug.Debug)
 
 pub(all) struct Section {
   id : Int
@@ -100,6 +202,16 @@ pub(all) struct SectionDelta {
   delta_bytes : Int
 } derive(@debug.Debug)
 pub impl ToJson for SectionDelta
+
+pub(all) struct SideCoverage {
+  total_functions : Int
+  matched_functions : Int
+  total_bytes : Int
+  matched_bytes : Int
+  missing_name : Int
+  ambiguous_name : Int
+  symbol_only_here : Int
+} derive(ToJson, @debug.Debug)
 
 pub(all) struct Symbol {
   raw : String

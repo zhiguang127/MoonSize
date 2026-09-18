@@ -44,7 +44,7 @@ test('optional names and unavailable function indices serialize as explicit null
 test('present optional JSON values are scalars or objects, never Option arrays',async()=>{
   assert.equal(WebAssembly.validate(namedFunction),true);
   const a=JSON.parse(analyze_json(namedFunction)).analysis;
-  assert.equal(a.schema_version,2);
+  assert.equal(a.schema_version,3);
   assert.equal(a.functions[0].function_index,0);
   assert.equal(a.functions[0].name,rawSymbol);
   assert.equal(a.functions[0].symbol.display,'@moonbitlang/core/builtin.foo');

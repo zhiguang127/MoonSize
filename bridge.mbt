@@ -23,6 +23,8 @@ pub fn limits_json() -> String {
     "max_metadata_entries": max_metadata_entries,
     "max_name_bytes": max_name_bytes,
     "max_total_name_bytes": max_total_name_bytes,
+    "max_reference_entries": max_reference_entries,
+    "max_control_depth": max_control_depth,
   }
   limits.stringify()
 }

@@ -37,6 +37,7 @@ pub(all) struct Analysis {
   module_header_bytes : Int
   sections : Array[Section]
   functions : Array[FunctionBody]
+  references : ReferenceGraph
   warnings : Array[String]
 } derive(ToJson, Debug)
 
@@ -57,6 +58,10 @@ pub(all) struct Comparison {
   after_bytes : Int
   delta_bytes : Int
   sections : Array[SectionDelta]
+  packages : Array[PackageDelta]
+  functions : Array[FunctionDelta]
+  matching : MatchingCoverage
+  code_overhead_delta_bytes : Int
 } derive(ToJson, Debug)
 
 ///|

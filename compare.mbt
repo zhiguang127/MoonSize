@@ -31,12 +31,28 @@ pub fn compare(before : Analysis, after : Analysis) -> Comparison {
       delta_bytes: after_bytes - before_bytes,
     }
   })
+  let (functions, matching) = compare_functions(
+    before.functions,
+    after.functions,
+  )
+  let code_delta = sections.fold(init=0, fn(n, s) {
+    if s.id == 10 {
+      n + s.delta_bytes
+    } else {
+      n
+    }
+  })
   {
-    schema_version: 2,
+    schema_version: 3,
     before_bytes: before.total_bytes,
     after_bytes: after.total_bytes,
     delta_bytes: after.total_bytes - before.total_bytes,
     sections,
+    packages: compare_packages(before.functions, after.functions),
+    functions,
+    code_overhead_delta_bytes: code_delta -
+    (matching.after.total_bytes - matching.before.total_bytes),
+    matching,
   }
 }
 

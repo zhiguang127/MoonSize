@@ -112,7 +112,7 @@ fn Reader::value_type(self : Reader) -> Unit raise ParseError {
   let b = self.byte()
   if b == 0x63 || b == 0x64 {
     self.heap_type()
-  } else if !(b >= 0x65 && b <= 0x73) && !(b >= 0x7B && b <= 0x7F) {
+  } else if !(b >= 0x65 && b <= 0x74) && !(b >= 0x7B && b <= 0x7F) {
     raise Invalid(self.pos - 1, "Unsupported value type in import metadata")
   }
 }

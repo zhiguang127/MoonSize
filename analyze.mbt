@@ -20,10 +20,12 @@ fn section_label(id : Int) -> String {
 }
 
 ///|
-fn import_function_count(r : Reader) -> Int raise ParseError {
+fn import_counts(r : Reader) -> (Int, Int, Int) raise ParseError {
   let count = r.count()
   r.budget.entries(count, r.pos)
   let mut functions = 0
+  let mut tables = 0
+  let mut globals = 0
   for i = 0; i < count; i = i + 1 {
     ignore(r.string())
     ignore(r.string())
@@ -33,11 +35,13 @@ fn import_function_count(r : Reader) -> Int raise ParseError {
         functions += 1
       }
       1 => {
+        tables += 1
         r.value_type()
         r.limits()
       }
       2 => r.limits()
       3 => {
+        globals += 1
         r.value_type()
         ignore(r.byte())
       }
@@ -49,7 +53,7 @@ fn import_function_count(r : Reader) -> Int raise ParseError {
     }
   }
   r.finish()
-  functions
+  (functions, tables, globals)
 }
 
 ///|
@@ -78,7 +82,8 @@ fn read_function_names(r : Reader) -> Map[Int, String] raise ParseError {
 }
 
 ///|
-/// Inspect a core Wasm module without executing it or decoding instructions.
+/// Inspect a core Wasm module without executing it. Reference decoding is
+/// optional evidence and failures do not invalidate exact byte accounting.
 /// This checks byte framing, not full WebAssembly semantic validity.
 pub fn analyze(data : Bytes) -> Analysis raise ParseError {
   if data.length() > max_input_bytes {
@@ -99,13 +104,13 @@ pub fn analyze(data : Bytes) -> Analysis raise ParseError {
     data,
     pos: 8,
     end: data.length(),
-    budget: { names_bytes: 0, metadata_entries: 0, },
+    budget: { names_bytes: 0, metadata_entries: 0, reference_entries: 0, },
   }
   let sections : Array[Section] = []
   let bodies : Array[FunctionBody] = []
   let warnings : Array[String] = []
   let seen : Map[Int, Bool] = Map([])
-  let mut imports : Int? = Some(0)
+  let mut imports : (Int, Int, Int)? = Some((0, 0, 0))
   let mut names : Map[Int, String] = Map([])
   let mut has_names = false
   let mut function_count : Int? = None
@@ -135,7 +140,7 @@ pub fn analyze(data : Bytes) -> Analysis raise ParseError {
       total_bytes: r.pos - offset,
     })
     if id == 2 {
-      imports = Some(import_function_count(payload)) catch {
+      imports = Some(import_counts(payload)) catch {
         ResourceLimit(at, message) => raise ResourceLimit(at, message)
         Invalid(at, message) => {
           warnings.push(
@@ -214,7 +219,7 @@ pub fn analyze(data : Bytes) -> Analysis raise ParseError {
     raise Invalid(8, "Function and code section counts disagree")
   }
   let functions = bodies.map(fn(body) {
-    let index = imports.map(fn(count) { count + body.ordinal })
+    let index = imports.map(fn(counts) { counts.0 + body.ordinal })
     let name = match index {
       Some(i) => names.get(i)
       None => None
@@ -223,11 +228,19 @@ pub fn analyze(data : Bytes) -> Analysis raise ParseError {
     { ..body, function_index: index, name, symbol, }
   })
   {
-    schema_version: 2,
+    schema_version: 3,
     total_bytes: data.length(),
     module_header_bytes: 8,
     sections,
     functions,
+    references: build_references(
+      data,
+      sections,
+      functions,
+      imports,
+      names,
+      r.budget,
+    ),
     warnings,
   }
 }
