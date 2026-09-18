@@ -7,7 +7,7 @@
   "engines": { "node": ">=24" },
   "scripts": {
     "build": "moon build --target js --release --deny-warn",
-    "test": "moon test --target js --deny-warn && npm run build && node --test --test-isolation=none tests/integration.test.mjs tests/worker.test.mjs",
+    "test": "moon test --target js --deny-warn && npm run build && node --test --test-isolation=none tests/integration.test.mjs tests/attribution.test.mjs tests/worker.test.mjs",
     "demo": "node scripts/build-demo.mjs",
     "report": "node bin/moonsize.mjs diff reports/demo/before.wasm reports/demo/after.wasm --html reports/demo/report.html",
     "serve": "node scripts/serve.mjs"

@@ -1,8 +1,9 @@
 import {AnalysisClient} from './analysis-client.mjs';
 import {normalizeLocale,uiMessages} from './i18n.mjs';
 import {styles,renderBody,renderReport} from './report.mjs';
+import {mountAttributionReports,attributionStyles} from './attribution-report.mjs';
 
-const style=document.createElement('style');style.textContent=styles;document.head.append(style);
+const style=document.createElement('style');style.textContent=styles+attributionStyles;document.head.append(style);
 const $=id=>document.getElementById(id);
 const localeKey='moonsize-locale';
 const savedLocale=()=>{try{return localStorage.getItem(localeKey);}catch{return null;}};
@@ -43,6 +44,7 @@ function applyLocale(){
   $('language').textContent=text.switchLabel;
   $('language').setAttribute('aria-label',text.switchAria);
   if(last)$('report').innerHTML=renderBody(last,localizedFiles(lastFiles),locale);
+  if(last)mountAttributionReports($('report'));
   setStatus(status.key,...status.args);
 }
 const limit=id=>{
@@ -71,6 +73,7 @@ async function run(load){
     if(!result.ok)throw uiError('parseError',result.error.offset,result.error.message);
     last=result;lastFiles=files;
     $('report').innerHTML=renderBody(result,localizedFiles(files),locale);
+    mountAttributionReports($('report'));
     $('download').disabled=false;
     setStatus(result.budget&&!result.budget.passed?'completeOverBudget':'complete');
   }catch(error){

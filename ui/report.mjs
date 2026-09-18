@@ -1,4 +1,5 @@
 import {normalizeLocale,reportMessages} from './i18n.mjs';
+import {renderAttribution,attributionScript,attributionStyles} from './attribution-report.mjs';
 
 const formats = {en:new Intl.NumberFormat('en-US'),zh:new Intl.NumberFormat('zh-CN')};
 export const bytes = (n, locale='en') => `${formats[normalizeLocale(locale)].format(n)} B`;
@@ -46,7 +47,7 @@ export function renderBody(result, files = {}, requestedLocale='en') {
   const separator=locale==='zh'?'：':': ';
   const warnings = [...(result.before?.warnings ?? []).map(w => `${copy.warningBefore}${separator}${w}`), ...a.warnings.map(w => `${d ? copy.warningAfter+separator : ''}${w}`)];
   const sizeClass = n => n > 0 ? 'up' : n < 0 ? 'down' : '';
-  return `<div class="topline"><div class="brand">◔ Moon<span>Size</span></div><span class="badge">MOONBIT CORE · v0.2</span></div>
+  return `<div class="topline"><div class="brand">◔ Moon<span>Size</span></div><span class="badge">MOONBIT CORE · SCHEMA ${a.schema_version}</span></div>
   <div class="eyebrow">${copy.tagline}</div><h1>${d ? copy.changedTitle : copy.singleTitle}</h1>
   <p class="intro">${d ? copy.changedIntro : copy.singleIntro}</p>
   <div class="files muted small">${d ? `${copy.before}${separator}<code>${escape(files.before ?? 'before.wasm')}</code> → ${copy.after}${separator}<code>${escape(files.after ?? 'after.wasm')}</code>` : `<code>${escape(files.input ?? 'module.wasm')}</code>`}</div>
@@ -62,6 +63,7 @@ export function renderBody(result, files = {}, requestedLocale='en') {
   <section class="panel"><div class="panelhead"><h2>${copy.largestFunctions}</h2><span class="badge">${copy.top15}</span></div>
   <div class="tablewrap"><table><thead><tr><th>${copy.function}</th><th>${copy.bodyPrefix}</th></tr></thead><tbody>${functionRows.length ? functionRows.map(f => `<tr><td><code>${escape(f.symbol?.display ?? f.name ?? (f.function_index === null ? `code[${f.ordinal}]` : `func[${f.function_index}]`))}</code><div class="muted small">${copy.codeOffset(f.ordinal,f.offset)}</div>${f.symbol?`<div class="muted small">${f.symbol.status==='decoded'?copy.decoded:f.symbol.status==='unsupported'?copy.unsupported:copy.original}${f.symbol.package_name?` · ${copy.encodedPackage}: ${escape(f.symbol.package_name)}`:''}</div>${f.symbol.status==='decoded'?`<details><summary class="small muted">${copy.rawSymbol}</summary><code>${escape(f.symbol.raw)}</code></details>`:''}`:''}</td><td>${formatBytes(f.total_bytes)}</td></tr>`).join('') : `<tr><td colspan="2">${copy.noFunctions}</td></tr>`}</tbody></table></div>
   <p class="note">${copy.functionNote}</p></section></div>
+  ${renderAttribution(result,locale)}
   <p class="foot">${copy.footer}</p>`;
 }
 
@@ -72,5 +74,5 @@ export function renderReport(result, files = {}, requestedLocale='en') {
     return `<main data-report-locale="${key}"${hidden?' hidden':''}><div class="report-switch"><button type="button" class="secondary language" data-switch-locale="${key==='en'?'zh':'en'}" aria-label="${messages.switchAria}">${messages.switchLabel}</button></div>${renderBody(result,files,key)}</main>`;
   };
   const script=`<script>(()=>{const show=locale=>{for(const report of document.querySelectorAll('[data-report-locale]'))report.hidden=report.dataset.reportLocale!==locale;document.documentElement.lang=locale==='zh'?'zh-CN':'en';document.title=locale==='zh'?'MoonSize · 构建报告':'MoonSize · Build report';};for(const button of document.querySelectorAll('[data-switch-locale]'))button.addEventListener('click',()=>show(button.dataset.switchLocale));show('${locale}');})();</script>`;
-  return `<!doctype html><html lang="${copy.lang}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${copy.title}</title><style>${styles}</style>${report('en',locale!=='en')}${report('zh',locale!=='zh')}${script}</html>`;
+  return `<!doctype html><html lang="${copy.lang}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${copy.title}</title><style>${styles}${attributionStyles}</style>${report('en',locale!=='en')}${report('zh',locale!=='zh')}${script}<script>${attributionScript}</script></html>`;
 }
