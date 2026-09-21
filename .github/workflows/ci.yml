@@ -27,6 +27,14 @@ jobs:
         run: |
           npm test
           npm run demo
+      - name: Size policy and Job Summary
+        run: |
+          node bin/moonsize.mjs diff reports/demo/before.wasm reports/demo/after.wasm \
+            --before-build reports/demo/before.build.json \
+            --after-build reports/demo/after.build.json \
+            --policy examples/ci-policy.json \
+            --summary "$GITHUB_STEP_SUMMARY" \
+            --html reports/demo/report.html --json > reports/demo/ci-result.json
       - name: Reproduce pinned external cases and optimization
         run: python3 scripts/build-cases.py
       - name: Upload reports and fixture manifest
@@ -37,5 +45,5 @@ jobs:
           path: |
             reports/demo/*.wasm
             reports/demo/*.html
-            reports/demo/manifest.json
+            reports/demo/*.json
             reports/cases/
