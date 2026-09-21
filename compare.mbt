@@ -64,31 +64,47 @@ pub fn check_budget(
   max_bytes? : Int,
   max_growth_bytes? : Int,
 ) -> Budget raise ParseError {
+  check_size_budget(
+    comparison.before_bytes,
+    comparison.after_bytes,
+    max_bytes?,
+    max_growth_bytes?,
+  )
+}
+
+///|
+/// Check independently measured sizes using the same inclusive, signed policy.
+pub fn check_size_budget(
+  before_bytes : Int,
+  after_bytes : Int,
+  max_bytes? : Int,
+  max_growth_bytes? : Int,
+) -> Budget raise ParseError {
+  if before_bytes < 0 || after_bytes < 0 {
+    raise Invalid(0, "Measured sizes must be nonnegative")
+  }
+  let delta_bytes = after_bytes - before_bytes
   let violations : Array[String] = []
   if max_bytes is Some(limit) {
     if limit < 0 {
       raise Invalid(0, "max_bytes must be nonnegative")
     }
-    if comparison.after_bytes > limit {
-      violations.push(
-        "Total \{comparison.after_bytes} bytes exceeds limit \{limit}",
-      )
+    if after_bytes > limit {
+      violations.push("Total \{after_bytes} bytes exceeds limit \{limit}")
     }
   }
   if max_growth_bytes is Some(limit) {
     if limit < 0 {
       raise Invalid(0, "max_growth_bytes must be nonnegative")
     }
-    if comparison.delta_bytes > limit {
-      violations.push(
-        "Growth \{comparison.delta_bytes} bytes exceeds limit \{limit}",
-      )
+    if delta_bytes > limit {
+      violations.push("Growth \{delta_bytes} bytes exceeds limit \{limit}")
     }
   }
   {
     passed: violations.is_empty(),
-    actual_bytes: comparison.after_bytes,
-    growth_bytes: comparison.delta_bytes,
+    actual_bytes: after_bytes,
+    growth_bytes: delta_bytes,
     max_bytes,
     max_growth_bytes,
     violations,

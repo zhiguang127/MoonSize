@@ -14,6 +14,8 @@ pub fn budget_json(Bytes, Bytes, Int, Int) -> String
 
 pub fn check_budget(Comparison, max_bytes? : Int, max_growth_bytes? : Int) -> Budget raise ParseError
 
+pub fn check_size_budget(Int, Int, max_bytes? : Int, max_growth_bytes? : Int) -> Budget raise ParseError
+
 pub fn compare(Analysis, Analysis) -> Comparison
 
 pub fn compare_json(Bytes, Bytes) -> String
@@ -39,6 +41,8 @@ pub let max_reference_entries : Int
 pub let max_sections : Int
 
 pub let max_total_name_bytes : Int
+
+pub fn size_budget_json(Int, Int, Int, Int) -> String
 
 // Errors
 pub suberror ParseError {

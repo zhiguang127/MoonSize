@@ -9,6 +9,7 @@ options(
         "analyze_json",
         "compare_json",
         "budget_json",
+        "size_budget_json",
         "limits_json",
       ],
       "format": "esm",
