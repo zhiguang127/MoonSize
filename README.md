@@ -2,9 +2,9 @@
 
 **MoonBit 原生 WebAssembly 体积分析与构建回归工具。**
 
-分析 `.wasm` 的区段与函数体字节数，按包和唯一原始符号比较两次构建，追踪直接调用、函数引用和已知包含路径，并用体积预算检查增长。解析、比较、引用图与预算判断均由 MoonBit 实现；Node CLI 和浏览器界面负责文件读取与展示。
+分析 `.wasm` 的区段与函数体字节数，按包和唯一原始符号比较两次构建，追踪直接调用、函数引用和已知包含路径，并用体积预算检查增长。解析、比较、引用图与预算判断均由 MoonBit 实现；Node CLI 负责文件读取、固定参数压缩测量和报告；浏览器界面提供本地 raw 分析与展示。
 
-当前在 v0.2 基础上开发 **L2 / L3（未发布，JSON schema 3）**，尚未发布到 Mooncakes 或 npm。新增 MoonBit 符号反修饰、可取消 Worker、统一资源限制，以及 CommonMark / TOML 两个外部项目案例。核心已在 JS、Wasm、Wasm-GC、Native 四个后端通过本地和远端测试。见 [验证记录](docs/validation.md)。
+当前开发 **v0.3（未发布，分析 JSON schema 3）**，包含 L2 / L3、CI Job Summary、构建条件记录及独立 gzip / Brotli 预算，尚未发布到 Mooncakes 或 npm。新增 MoonBit 符号反修饰、可取消 Worker、统一资源限制，以及 CommonMark / TOML 两个外部项目案例。当前核心已在 JS、Wasm、Wasm-GC、Native 四个后端通过本地测试；远端成功记录属于此前 v0.2，v0.3 尚未远端运行。见 [验证记录](docs/validation.md)。
 
 CommonMark 的一次源码改动，在相同编译参数下将产物从 **679,991 B 降至 617,546 B（−9.18%）**；两边都 strip 后仍减少 22,983 B。2,887 组输入在前后版本、Wasm-GC 与 JS 上输出一致。见 [案例与复现说明](docs/cases.zh.md)。
 
@@ -45,19 +45,21 @@ CI 使用同版本的官方 Linux 工具链与 core，并校验固定 SHA-256。
 node bin/moonsize.mjs analyze app.wasm
 node bin/moonsize.mjs analyze app.wasm --json
 node bin/moonsize.mjs analyze app.wasm --why 42
-node bin/moonsize.mjs diff before.wasm after.wasm --html report.html
+node bin/moonsize.mjs diff before.wasm after.wasm --compress --html report.html --summary summary.md
 node bin/moonsize.mjs diff before.wasm after.wasm --max-bytes 32000 --max-growth 30000 --json
 ```
+
+通过 `--policy policy.json` 配置 raw / gzip / Brotli 独立预算和严格构建条件检查；通过 `record` 保存与产物 SHA-256 绑定的构建声明。详见 [CI 决策、构建条件与压缩体积](docs/engineering-ci.zh.md)。
 
 预算单位为整数字节，边界包含在允许范围内。例如上限 32000 时，32000 通过、32001 失败。增长为带符号差值，缩小的产物可通过零增长预算。
 
 | 退出码 | 含义 |
 | --- | --- |
 | 0 | 分析成功，设置的预算通过 |
-| 1 | 分析成功，但预算超限 |
+| 1 | 分析成功，但预算或构建条件策略失败 |
 | 2 | 参数、文件读取、结构解析或输出错误 |
 
-`--html` 可与 `--json` 同时使用，报告路径输出到 stderr，JSON 输出到 stdout。HTML 输出不能覆盖输入 Wasm。
+`--html` 可与 `--json` 同时使用，报告路径输出到 stderr，JSON 输出到 stdout。HTML、摘要与构建记录输出不能覆盖输入 Wasm、配置、记录或其他输出。`--summary` 追加 Markdown，可传入 GitHub 的 `$GITHUB_STEP_SUMMARY`。
 
 ## MoonBit API
 
@@ -74,7 +76,7 @@ let budget = @moonsize.check_budget(
 )
 ```
 
-`analyze` 可能抛出 `ParseError::Invalid(offset, message)` 或 `ResourceLimit(offset, message)`；`check_budget` 会拒绝无效预算。公共类型与接口见 [pkg.generated.mbti](pkg.generated.mbti)。JS 导出 `analyze_json`、`compare_json`、`budget_json` 和 `limits_json`，分析接口接收 `Uint8Array` 并返回 JSON 字符串。Bridge 中 `-1` 代表未设置预算，其他负数无效。
+`analyze` 可能抛出 `ParseError::Invalid(offset, message)` 或 `ResourceLimit(offset, message)`；`check_budget` 会拒绝无效预算。公共类型与接口见 [pkg.generated.mbti](pkg.generated.mbti)。JS 导出 `analyze_json`、`compare_json`、`budget_json`、`size_budget_json` 和 `limits_json`，分析接口接收 `Uint8Array` 并返回 JSON 字符串。Bridge 中 `-1` 代表未设置预算，其他负数无效。
 
 JSON schema 已升至 **3**：新增 `analysis.references`，以及 `comparison.packages`、`functions`、`matching` 和 `code_overhead_delta_bytes`。完整字段与语义见 [L2 / L3 接口说明](docs/analysis-l2-l3.zh.md)。此前 schema 2 的约定保持：可选字段为直接值或 `null`，修复 v0.1 中 `Some` 意外输出为单元素数组的问题。函数新增 `symbol: {raw, display, package_name, status, kind} | null`。`decode_symbol` 依据固定编译器的 v0 名称语法，保留原符号，并区分 `decoded`、`plain`、`unsupported`。包名只在符号明确编码时提供，不代表源码映射；未来版本或不支持的语法安全回退到原文。来源见 [NOTICE](NOTICE)。
 
@@ -87,7 +89,7 @@ JSON schema 已升至 **3**：新增 `analysis.references`，以及 `comparison.
 - 跨构建比较总量、区段、按符号归属的函数体包汇总，以及两侧唯一且非空的原始函数名称。函数索引只用于单个构建内的引用图，不作为跨构建身份；重名和无名称项保留为未匹配。
 - 函数变化分为增大、缩小、大小相同、新增符号、消失符号及双侧未匹配。大小相同不代表行为相同，新增 / 消失符号不证明源码新增 / 删除。包汇总包含未知归属，并不代表依赖全部成本。
 - 匹配覆盖率分别统计前后构建的函数数量与函数体字节数。函数体汇总与 code 区段的差额是区段头和函数数量编码；完整区段总量仍严格核对文件长度。
-- 所有数值都是原始二进制字节，不是 gzip/Brotli 大小、内存占用、retained size 或可删除体积。
+- 核心分析的所有数值都是原始二进制字节。CLI 的 `engineering.delivery` 独立存放整文件 gzip / Brotli 测量、参数及运行库版本；未测量为 `null`，不代表内存占用、retained size 或可删除体积。
 
 ## 已完成与边界
 
@@ -110,7 +112,7 @@ JSON schema 已升至 **3**：新增 `analysis.references`，以及 `comparison.
 
 浏览器每次分析创建独立 Worker，输入缓冲转移给 Worker；取消、错误或 30 秒超时会终止 Worker，过期结果不会覆盖新报告。区段概览展示前 100 行，最大函数概览展示前 15 个函数。包级 / 函数级 diff 可分页，函数可搜索和按变化类型筛选；引用浏览器可切换基准 / 当前构建，查看直接调用者、被调用者、其他引用及已知包含路径。路径和引用列表最多展示 50 项，JSON 保留完整证据；离线 HTML 同样支持交互。限制用于约束工作量，不构成峰值内存或全部恶意输入性能承诺。
 
-引用分析支持标准数值、内存、bulk memory、SIMD、Wasm-GC、尾调用与类型化函数引用的指令编码，以及 export、start、global / table 初始化和 8 种 element 段编码。`call_indirect` / `call_ref` 的目标保留未知，观察到的表成员仅是可能目标。未知或损坏指令使对应区域降级，错误记录在 `references.issues`；精确字节核算仍保留。没有已知路径不等于未使用，不计算 retained / removable size。source map、自动优化和压缩大小尚未实现。
+引用分析支持标准数值、内存、bulk memory、SIMD、Wasm-GC、尾调用与类型化函数引用的指令编码，以及 export、start、global / table 初始化和 8 种 element 段编码。`call_indirect` / `call_ref` 的目标保留未知，观察到的表成员仅是可能目标。未知或损坏指令使对应区域降级，错误记录在 `references.issues`；精确字节核算仍保留。没有已知路径不等于未使用，不计算 retained / removable size。source map 与自动优化尚未实现。压缩指标仅由 Node CLI 计算，离线 HTML 可展示；浏览器中的未测量指标明确标记。
 
 ## 真实构建示例
 

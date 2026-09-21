@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased — L2 / L3
+## 0.3.0 — unreleased
+
+- Add CLI `--compress` whole-file gzip/Brotli measurements with fixed settings and recorded runtime versions; share inclusive budget decisions through MoonBit `check_size_budget` / `size_budget_json`.
+- Add strict versioned policy files with independent raw/gzip/Brotli limits and optional build-condition requirements. Preserve raw budget compatibility while exposing a combined decision and exit status.
+- Bind declared build conditions to artifact SHA-256 using `record`; distinguish matching, differing and unknown conditions without treating source revisions as build parameters.
+- Append bounded, escaped CI Job Summaries with top regressions and matching coverage. Extend bilingual offline reports, demo records and the Actions evidence workflow; protect all output paths from input/configuration aliases.
+
 
 - Upgrade analysis/comparison JSON to schema 3. Add symbol-owned package deltas, unique raw-name function matching, one-sided symbol and unresolved categories, and separate count/byte coverage for each build.
 - Decode instruction framing for direct calls, tail calls and function references, including Wasm-GC and SIMD; inspect exports, start, table/global initializers and element segments. Preserve unresolved indirect/typed calls and explicit regional decode issues.
