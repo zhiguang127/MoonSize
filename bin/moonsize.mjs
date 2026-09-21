@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-import { open, writeFile, mkdir, realpath } from 'node:fs/promises';
+import { writeFile, appendFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { analyze_json, budget_json, compare_json, limits_json } from '../_build/js/release/build/moonsize.js';
 import { bytes, signed, renderReport } from '../ui/report.mjs';
 import {referencePath} from '../ui/reference-view.mjs';
+import {readBounded,readConfig,parsePolicy,createBuildRecord,verifyBuildRecord,compareBuilds,measureSizes,evaluatePolicy,protectOutputs} from '../lib/engineering.mjs';
+import {renderSummary} from '../lib/summary.mjs';
 const limits = JSON.parse(limits_json());
 
 const usage = `MoonSize — inspect WebAssembly build sizes
@@ -11,10 +13,18 @@ const usage = `MoonSize — inspect WebAssembly build sizes
   node bin/moonsize.mjs analyze file.wasm [--json] [--html report.html]
   node bin/moonsize.mjs diff before.wasm after.wasm [--json] [--html report.html]
       [--max-bytes N] [--max-growth N] [--why FUNCTION_INDEX]
+      [--compress] [--policy policy.json] [--summary summary.md]
+      [--before-build before.build.json] [--after-build after.build.json]
+  node bin/moonsize.mjs record file.wasm --build-info info.json --output file.build.json
+
+--compress measures whole-file gzip (level 9) and Brotli (quality 6).
+--summary appends Markdown, including failed policy checks, to the given file.
+--policy configures independent raw/gzip/brotli budgets and condition checks.
+Build records bind declared conditions to SHA-256; missing conditions remain unknown.
 
 --why inspects a function index in the current build (also works with analyze).
 
-Limits are inclusive integer bytes. Exit: 0 success, 1 budget exceeded, 2 input/error.
+Limits are inclusive integer bytes. Exit: 0 success, 1 policy failed, 2 input/error.
 Build the MoonBit core first: npm run build`;
 
 try {
@@ -23,20 +33,23 @@ try {
     console.log(usage);
   } else {
     const command = args.shift();
-    if (!['analyze','diff'].includes(command)) throw new Error('Expected analyze or diff. Use --help.');
+    if (!['analyze','diff','record'].includes(command)) throw new Error('Expected analyze, diff or record. Use --help.');
     const inputs = [];
     const options = new Map();
     while (args.length) {
       const arg = args.shift();
       if (!arg.startsWith('--')) { inputs.push(arg); continue; }
-      if (!['--json','--html','--max-bytes','--max-growth','--why'].includes(arg)) throw new Error(`Unknown option: ${arg}`);
+      if (!['--json','--html','--max-bytes','--max-growth','--why','--compress','--policy','--summary','--before-build','--after-build','--build-info','--output'].includes(arg)) throw new Error(`Unknown option: ${arg}`);
       if (options.has(arg)) throw new Error(`Duplicate option: ${arg}`);
-      if (arg === '--json') { options.set(arg, true); continue; }
+      if (arg === '--json' || arg === '--compress') { options.set(arg, true); continue; }
       const value = args.shift();
       if (!value || value.startsWith('--')) throw new Error(`Missing value for ${arg}`);
       options.set(arg, value);
     }
     if (inputs.length !== (command === 'diff' ? 2 : 1)) throw new Error(`Incorrect number of input files for ${command}`);
+    const permitted=command==='record' ? ['--build-info','--output'] : command==='analyze' ? ['--json','--html','--why','--compress','--summary','--after-build'] : ['--json','--html','--why','--compress','--summary','--before-build','--after-build','--max-bytes','--max-growth','--policy'];
+    for(const key of options.keys())if(!permitted.includes(key))throw new Error(`${key} is not supported by ${command}`);
+    if(command==='record' && (!options.has('--build-info') || !options.has('--output')))throw new Error('record requires --build-info and --output');
     const hasBudget = options.has('--max-bytes') || options.has('--max-growth');
     if (hasBudget && command !== 'diff') throw new Error('Budget options require diff with a baseline.');
     const limit = name => {
@@ -47,29 +60,37 @@ try {
     };
     const maxBytes = limit('--max-bytes'), maxGrowth = limit('--max-growth');
     const why = limit('--why');
-    const data = await Promise.all(inputs.map(async file => {
-      const handle = await open(file,'r');
-      try {
-        const size = (await handle.stat()).size;
-        if (size > limits.max_input_bytes) throw new Error(`Input exceeds limit ${limits.max_input_bytes} bytes`);
-        if (!Number.isSafeInteger(size) || size < 0) throw new Error('Unsupported file size');
-        const data = new Uint8Array(size);
-        let offset = 0;
-        while (offset < size) {
-          const {bytesRead} = await handle.read(data,offset,size-offset,offset);
-          if (!bytesRead) throw new Error('Input changed while reading');
-          offset += bytesRead;
-        }
-        if ((await handle.stat()).size !== size) throw new Error('Input changed while reading');
-        return data;
-      } finally { await handle.close(); }
-    }));
-    const result = JSON.parse(command === 'analyze' ? analyze_json(data[0]) : hasBudget ? budget_json(data[0],data[1],maxBytes,maxGrowth) : compare_json(data[0],data[1]));
+    const configInputs=['--policy','--before-build','--after-build','--build-info'].filter(key=>options.has(key)).map(key=>options.get(key));
+    const outputs=['--html','--summary','--output'].filter(key=>options.has(key)).map(key=>options.get(key));
+    await protectOutputs(outputs,[...inputs,...configInputs]);
+    const policy=parsePolicy(options.has('--policy') ? await readConfig(options.get('--policy')) : undefined);
+    for(const [key,value] of [['max_bytes',maxBytes],['max_growth_bytes',maxGrowth]])if(value!==-1){
+      policy.budgets.raw ??= {};
+      if(Object.hasOwn(policy.budgets.raw,key))throw new Error(`Duplicate raw budget ${key} in CLI and policy`);
+      policy.budgets.raw[key]=value;
+    }
+    const data = await Promise.all(inputs.map(file=>readBounded(file,limits.max_input_bytes)));
+    const result = JSON.parse(command !== 'diff' ? analyze_json(data[0]) : hasBudget ? budget_json(data[0],data[1],maxBytes,maxGrowth) : compare_json(data[0],data[1]));
     if (!result.ok) {
       if (options.has('--json')) console.log(JSON.stringify(result, null, 2));
       else console.error(`MoonSize: byte ${result.error.offset}: ${result.error.message}`);
       process.exitCode = 2;
+    } else if(command==='record') {
+      const record=createBuildRecord(data[0],await readConfig(options.get('--build-info')));
+      const output=path.resolve(options.get('--output'));
+      await mkdir(path.dirname(output),{recursive:true});
+      await writeFile(output,JSON.stringify(record,null,2)+'\n');
+      console.log(`Build record: ${output}`);
     } else {
+      const provenance={before:null,after:null};
+      for(const [side,index] of [['before',0],['after',data.length-1]])if(options.has(`--${side}-build`))provenance[side]=verifyBuildRecord(await readConfig(options.get(`--${side}-build`)),data[index]);
+      provenance.comparability=compareBuilds(provenance.before,provenance.after);
+      const compressed=options.has('--compress')||Object.hasOwn(policy.budgets,'gzip')||Object.hasOwn(policy.budgets,'brotli');
+      const delivery=await measureSizes(command==='diff'?data[0]:null,data.at(-1),compressed);
+      const decision=evaluatePolicy(policy,delivery,provenance.comparability);
+      result.engineering={schema_version:1,policy,provenance,delivery,decision};
+      const rawCheck=decision.checks.find(check=>check.metric==='raw');
+      if(rawCheck){const {metric,...budget}=rawCheck;result.budget=budget;}
       const current = result.analysis ?? result.after;
       if (why !== -1) {
         if (!current.references.nodes[why]) throw new Error('Function index unavailable or out of range in current build');
@@ -78,19 +99,29 @@ try {
       const files = command === 'analyze' ? {input: inputs[0]} : {before: inputs[0], after: inputs[1]};
       if (options.has('--html')) {
         const output = path.resolve(options.get('--html'));
-        const canonical = await realpath(output).catch(() => output);
-        for (const input of inputs) {
-          if (canonical.toLowerCase() === (await realpath(input)).toLowerCase()) throw new Error('HTML output must not overwrite an input module');
-        }
         await mkdir(path.dirname(output), {recursive:true});
         await writeFile(output, renderReport(result,files));
         console.error(`Report: ${output}`);
+      }
+      if(options.has('--summary')){
+        const output=path.resolve(options.get('--summary'));
+        await mkdir(path.dirname(output),{recursive:true});
+        await appendFile(output,renderSummary(result,files));
+        console.error(`Summary: ${output}`);
       }
       if (options.has('--json')) console.log(JSON.stringify(result,null,2));
       else {
         const a = result.analysis ?? result.after;
         console.log(`MoonSize  ${inputs.at(-1)}\n${bytes(a.total_bytes)} · ${a.sections.length} sections · ${a.functions.length} defined functions`);
         if (result.comparison) console.log(`Change: ${signed(result.comparison.delta_bytes)} (baseline ${bytes(result.comparison.before_bytes)})`);
+        console.log(`Reported build conditions: ${provenance.comparability.status}`);
+        for(const row of provenance.comparability.differences)console.log(`  Different: ${row.field}`);
+        if(provenance.comparability.missing.length)console.log(`  Unknown: ${provenance.comparability.missing.map(row=>row.field).join(', ')}`);
+        for(const metric of ['gzip','brotli'])if(delivery.metrics[metric]){
+          const m=delivery.metrics[metric];
+          console.log(`${metric}: ${m.before_bytes===null?'':`${bytes(m.before_bytes)} → `}${bytes(m.after_bytes)}${m.delta_bytes===null?'':` (${signed(m.delta_bytes)})`}`);
+        }
+        if(delivery.compression)console.log(`Whole-file compression: ${JSON.stringify(delivery.compression)}`);
         const rows = result.comparison?.sections ?? a.sections;
         for (const s of rows) console.log(`  ${s.id === 0 ? `custom:${s.custom_name}` : s.label}  ${result.comparison ? `${bytes(s.before_bytes)} → ${bytes(s.after_bytes)} (${signed(s.delta_bytes)})` : bytes(s.total_bytes)}`);
         const safe=value=>String(value).replace(/[\u0000-\u001f\u007f-\u009f]/g,c=>`\\u${c.charCodeAt(0).toString(16).padStart(4,'0')}`);
@@ -143,12 +174,17 @@ try {
           }
           for(const ref of graph.dynamic_references.filter(r=>r.source_kind==='function'&&r.source_index===why).slice(0,50))console.log(`  Unresolved ${ref.kind} at byte ${ref.offset}, type[${ref.type_index}]${ref.table_index===null?'':`, table[${ref.table_index}]`}`);
         }
-        if (result.budget) console.log(`Budget: ${result.budget.passed ? 'PASS' : 'FAIL'}${result.budget.violations.length ? '\n'+result.budget.violations.join('\n') : ''}`);
+        if (result.budget) console.log(`Raw budget: ${result.budget.passed ? 'PASS' : 'FAIL'}${result.budget.violations.length ? '\n'+result.budget.violations.join('\n') : ''}`);
       }
-      if (result.budget && !result.budget.passed) process.exitCode = 1;
+      if(!options.has('--json')){
+        console.log(`Policy: ${decision.status}`);
+        for(const violation of decision.violations)console.log(`  ${violation.scope}: ${violation.message}`);
+      }
+      if (decision.status==='fail') process.exitCode = 1;
     }
   }
 } catch (error) {
-  console.error(`MoonSize: ${error.message}`);
+  if(process.argv.includes('--json'))console.log(JSON.stringify({ok:false,error:{code:'invalid_input',offset:0,message:error.message}},null,2));
+  else console.error(`MoonSize: ${error.message}`);
   process.exitCode = 2;
 }

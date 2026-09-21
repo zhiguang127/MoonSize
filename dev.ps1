@@ -25,7 +25,7 @@ try {
       & (Join-Path $PSScriptRoot 'scripts\test-native.ps1')
       moon build --target js --release --deny-warn
       if ($LASTEXITCODE -ne 0) { throw 'JS build failed' }
-      node --test --test-isolation=none tests/integration.test.mjs tests/worker.test.mjs
+      node --test --test-isolation=none tests/integration.test.mjs tests/attribution.test.mjs tests/worker.test.mjs tests/engineering.test.mjs
     }
     'demo' { node scripts/build-demo.mjs }
     'native' { & (Join-Path $PSScriptRoot 'scripts\test-native.ps1') }

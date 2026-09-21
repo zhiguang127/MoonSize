@@ -7,6 +7,7 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const port=Number(process.env.PORT??4173);
 if(!Number.isInteger(port)||port<1||port>65535) throw new Error('Invalid PORT');
 const routes = new Map([
+  ['/engineering-report.mjs','ui/engineering-report.mjs'],['/ui/engineering-report.mjs','ui/engineering-report.mjs'],
   ['/','ui/index.html'],['/ui/','ui/index.html'],['/ui/index.html','ui/index.html'],
   ['/app.mjs','ui/app.mjs'],['/report.mjs','ui/report.mjs'],
   ['/ui/app.mjs','ui/app.mjs'],['/ui/report.mjs','ui/report.mjs'],
