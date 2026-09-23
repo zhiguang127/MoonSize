@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch pinned public projects; build, measure and verify the v0.2 case studies.
+"""Fetch pinned public projects; build, measure and verify the v0.3 case studies.
 
 Writes only .local/real-cases and reports/cases. Requires Python 3.10+, Node 24,
 and the compiler pinned in scripts/setup-ci.sh on PATH. No upstream publication.
@@ -62,6 +62,33 @@ def fetch(pin):
             break
     return dest
 
+def dependencies_hash():
+    # Fingerprint installed dependency sources, excluding generated build output.
+    h = hashlib.sha256()
+    moon_home = Path(os.environ.get('MOON_HOME', Path.home() / '.moon'))
+    for label, directory in [('core', moon_home / 'lib' / 'core'), ('mooncakes', WORK / '.mooncakes')]:
+        if not directory.is_dir():
+            raise RuntimeError(f'Missing installed dependency directory: {directory}')
+        for file in sorted(directory.rglob('*')):
+            if not file.is_file() or any(part.startswith('.') or part == '_build' for part in file.relative_to(directory).parts):
+                continue
+            if file.suffix not in ('.mbt', '.mbti') and file.name not in ('moon.mod', 'moon.pkg', 'moon.mod.json', 'moon.pkg.json'):
+                continue
+            h.update((label + '/' + file.relative_to(directory).as_posix()).encode() + b'\0')
+            h.update(hashlib.sha256(file.read_bytes()).digest())
+    return h.hexdigest()
+
+
+def record_artifact(filename, target, strip, source_revision):
+    info = dict(schema_version=1, compiler=(OUT / 'toolchain.log').read_text(encoding='utf-8').strip(),
+                target=target, profile='release', strip=strip, flags=[],
+                dependencies_hash=dependencies_hash(), source_revision=source_revision)
+    info_file = OUT / (filename + '.build-info.json')
+    info_file.write_text(json.dumps(info, indent=2) + '\n', encoding='utf-8')
+    run(['node', 'bin/moonsize.mjs', 'record', str(OUT / filename), '--build-info',
+         str(info_file), '--output', str(OUT / (filename + '.build.json'))],
+        label=filename + '-record')
+
 cmark, toml = [fetch(pin) for pin in PINS]
 (WORK / 'moon.work').write_text('members = ["upstream/cmark", "upstream/cmark/cmarkwrap", "upstream/toml", "upstream/toml/lexer", "upstream/toml/toml_cli", "upstream/toml/e2e"]\n', encoding='utf-8')
 # Windows Store's python3 execution alias is not an interpreter. This host-only
@@ -73,21 +100,23 @@ generator = cmark / 'src' / 'char' / 'gen_entities.py'
 lookup = cmark / 'src' / 'char' / 'html.mbt'
 originals = {p: p.read_text(encoding='utf-8') for p in (generator, lookup, cmark / 'src/char/entities.mbt')}
 
-def build_cmark(stage):
+def build_cmark(stage, source_revision):
     for target, suffix in [('wasm-gc', 'wasm'), ('js', 'js')]:
         run(['moon', 'build', 'upstream/cmark/cmarkwrap/src/lib', '--target', target, '--release', '--no-strip'], WORK, f'cmark-{stage}-{target}')
         artifact = WORK / '_build' / target / 'release' / 'build' / 'moonbit-community' / 'cmarkwrap' / 'lib' / ('lib.' + suffix)
         shutil.copy2(artifact, OUT / f'cmark-{stage}.{suffix if suffix == "wasm" else "mjs"}')
         if target == 'wasm-gc':
+            record_artifact(f'cmark-{stage}.wasm', 'wasm-gc', False, source_revision)
             run(['moon', 'build', 'upstream/cmark/cmarkwrap/src/lib', '--target', target, '--release', '--strip'], WORK, f'cmark-{stage}-stripped')
             shutil.copy2(artifact, OUT / f'cmark-{stage}-stripped.wasm')
+            record_artifact(f'cmark-{stage}-stripped.wasm', 'wasm-gc', True, source_revision)
     run(['moon', 'test', 'upstream/cmark/src/char', 'upstream/cmark/src/cmark', 'upstream/cmark/src/cmark_html', '--target', 'wasm-gc'], WORK, f'cmark-{stage}-tests')
 
 run(['moon', 'build', '--target', 'js', '--release', '--deny-warn'], label='moonsize-core')
 run(['moon', 'version', '--all'], label='toolchain')
 run(['moon', 'update'], WORK, label='registry-update')
 try:
-    build_cmark('before')
+    build_cmark('before', PINS[0]['commit'])
     run(['node', 'scripts/analyze-cases.mjs', '--baseline'], label='baseline-analysis')
     changed_generator = (ROOT / 'cases/cmark/gen_entities.py').read_text(encoding='utf-8')
     changed_lookup = (ROOT / 'cases/cmark/html.mbt').read_text(encoding='utf-8')
@@ -99,9 +128,10 @@ try:
         patch += ''.join(difflib.unified_diff(originals[file].splitlines(keepends=True), content.splitlines(keepends=True), fromfile='a/' + rel, tofile='b/' + rel))
         file.write_text(content, encoding='utf-8')
     (OUT / 'cmark-optimization.patch').write_text(patch, encoding='utf-8')
-    build_cmark('after')
+    build_cmark('after', PINS[0]['commit'] + '+patch:' + hashlib.sha256(patch.encode()).hexdigest())
     run(['moon', 'build', 'upstream/toml/toml_cli', '--target', 'wasm', '--release', '--no-strip'], WORK, 'toml-build')
     shutil.copy2(WORK / '_build/wasm/release/build/moonbit-community/toml_cli/toml_cli.wasm', OUT / 'toml-cli.wasm')
+    record_artifact('toml-cli.wasm', 'wasm', False, PINS[1]['commit'])
     run(['moon', 'test', 'upstream/toml', '--target', 'wasm'], WORK, 'toml-tests')
     dependencies = []
     for package in sorted((WORK / '.mooncakes').glob('*/*')):

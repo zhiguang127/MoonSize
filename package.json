@@ -1,7 +1,8 @@
 {
   "name": "moonsize-local",
   "version": "0.3.0",
-  "private": true,
+  "bin": {"moonsize": "bin/moonsize.mjs"},
+  "files": ["bin/", "lib/", "ui/*.mjs", "_build/js/release/build/moonsize.js", "README.md", "LICENSE", "NOTICE", "docs/analysis-l2-l3.zh.md", "docs/engineering-ci.zh.md"],
   "type": "module",
   "description": "Local CLI and report shell for the MoonBit MoonSize core",
   "engines": { "node": ">=24" },
@@ -10,6 +11,8 @@
     "test": "moon test --target js --deny-warn && npm run build && node --test --test-isolation=none tests/integration.test.mjs tests/attribution.test.mjs tests/worker.test.mjs tests/engineering.test.mjs",
     "demo": "node scripts/build-demo.mjs",
     "report": "node bin/moonsize.mjs diff reports/demo/before.wasm reports/demo/after.wasm --html reports/demo/report.html",
-    "serve": "node scripts/serve.mjs"
+    "serve": "node scripts/serve.mjs",
+    "package:check": "node scripts/check-package.mjs",
+    "pr:check": "node scripts/check-pr-flow.mjs"
   }
 }

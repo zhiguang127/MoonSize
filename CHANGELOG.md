@@ -2,6 +2,9 @@
 
 ## 0.3.0 — unreleased
 
+- Package an installable CLI candidate with a command entry and bundled MoonBit JS core; keep help and version available before core loading. Write JSON artifacts atomically and replace stale success results with error envelopes after path validation.
+- Rebuild CommonMark/TOML with byte-bound provenance records, compressed policies and pass/fail evidence; add a single-artifact PR workflow template and a local PR-flow acceptance check.
+
 - Add CLI `--json-file` so CI can save machine-readable results under output-path protection, including failed budget decisions and core parse errors; use it in the example workflow.
 
 - Add CLI `--compress` whole-file gzip/Brotli measurements with fixed settings and recorded runtime versions; share inclusive budget decisions through MoonBit `check_size_budget` / `size_budget_json`.

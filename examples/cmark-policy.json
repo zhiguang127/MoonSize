@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "require_comparable": true,
+  "budgets": {
+    "raw": {"max_growth_bytes": 0},
+    "gzip": {"max_growth_bytes": 0},
+    "brotli": {"max_growth_bytes": 0}
+  }
+}

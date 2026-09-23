@@ -131,6 +131,6 @@ node bin/moonsize.mjs diff before.wasm after.wasm \
 
 仓库的 [CI 工作流](../.github/workflows/ci.yml) 使用 [示例策略](../examples/ci-policy.json)。`npm run demo` 构建 8 个真实产物，同时生成记录；依赖指纹按安装的 core 源码及包配置计算，忽略生成目录，实际工具链版本来自 `moon version --all`。其报告可直接离线打开。CI 示例预算只适用于 demo，不能直接视为业务项目标准。
 
-`--json-file` 覆盖 JSON 文件，`--html` 覆盖报告文件，`--summary` 追加摘要，`record --output` 写入记录。所有输出先检查，不能覆盖输入模块、策略、构建记录或其他输出，包含已有符号链接和硬链接别名。预算失败（退出 1）及核心解析失败（退出 2）仍写出 JSON；参数、文件读取或记录绑定等前置错误不保证生成 JSON。`--json` 继续输出到 stdout，可与 `--json-file` 并用。shell 的 `> result.json` 重定向发生在 CLI 启动前，不受路径保护，CI 应使用 `--json-file`。
+`--json-file` 覆盖 JSON 文件，`--html` 覆盖报告文件，`--summary` 追加摘要，`record --output` 写入记录。所有输出先检查，不能覆盖输入模块、策略、构建记录或其他输出，包含已有符号链接和硬链接别名。预算失败（退出 1）及核心解析失败（退出 2）仍写出 JSON；输出路径校验完成后的文件读取、记录绑定等错误也写入本次错误 JSON。参数或路径校验在输出授权前失败时不会触碰目标文件，CI 应使用独立结果目录并检查退出码。`--json` 继续输出到 stdout，可与 `--json-file` 并用。shell 的 `> result.json` 重定向发生在 CLI 启动前，不受路径保护，CI 应使用 `--json-file`。
 
 参考：[Node zlib API](https://nodejs.org/api/zlib.html)、[GitHub Job Summary](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands#adding-a-job-summary)。本轮不增加 retained size、推断函数匹配或 source map。

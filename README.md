@@ -4,9 +4,11 @@
 
 分析 `.wasm` 的区段与函数体字节数，按包和唯一原始符号比较两次构建，追踪直接调用、函数引用和已知包含路径，并用体积预算检查增长。解析、比较、引用图与预算判断均由 MoonBit 实现；Node CLI 负责文件读取、固定参数压缩测量和报告；浏览器界面提供本地 raw 分析与展示。
 
-当前开发 **v0.3（未发布，分析 JSON schema 3）**，包含 L2 / L3、CI Job Summary、构建条件记录及独立 gzip / Brotli 预算，尚未发布到 Mooncakes 或 npm。新增 MoonBit 符号反修饰、可取消 Worker、统一资源限制，以及 CommonMark / TOML 两个外部项目案例。当前核心已在 JS、Wasm、Wasm-GC、Native 四个后端通过本地测试；远端成功记录属于此前 v0.2，v0.3 尚未远端运行。见 [验证记录](docs/validation.md)。
+当前开发 **v0.3（候选包未发布，分析 JSON schema 3）**，包含 L2 / L3、CI Job Summary、构建条件记录及独立 gzip / Brotli 预算，尚未发布到 Mooncakes 或 npm。新增 MoonBit 符号反修饰、可取消 Worker、统一资源限制，以及 CommonMark / TOML 两个外部项目案例。当前核心已在 JS、Wasm、Wasm-GC、Native 四个后端通过本地测试；远端成功记录属于此前 v0.2，v0.3 尚未远端运行。见 [验证记录](docs/validation.md)。
 
 CommonMark 的一次源码改动，在相同编译参数下将产物从 **679,991 B 降至 617,546 B（−9.18%）**；两边都 strip 后仍减少 22,983 B。2,887 组输入在前后版本、Wasm-GC 与 JS 上输出一致。见 [案例与复现说明](docs/cases.zh.md)。
+
+候选 CLI tarball 的安装与独立使用见 [快速开始](docs/quickstart.zh.md)，PR 接入见 [工作流模板](docs/pr-ci.zh.md)。
 
 ## 在当前 Windows 项目中运行
 
@@ -133,6 +135,6 @@ JSON schema 已升至 **3**：新增 `analysis.references`，以及 `comparison.
 
 [Twiggy](https://github.com/AlexEne/twiggy) 和 [WABT](https://github.com/WebAssembly/wabt) 是实际替代工具。本轮公开检索尚未发现定位完全相同的 MoonBit 原生产品，这不等于整个生态没有竞品。
 
-比赛演示可以完整展示「读入真实产物 → 定位初始化占用 → 修改静态表实现 → 验证行为 → 比较体积 → 预算检查」。远端 CI 已闭环；下一步是独立使用反馈、三分钟演示与发布准备。见 [项目申报草稿](docs/proposal.zh.md)、[后续安排](docs/roadmap.zh.md)。
+比赛演示可以完整展示「读入真实产物 → 定位初始化占用 → 修改静态表实现 → 验证行为 → 比较体积 → 预算检查」。远端 CI 已闭环；下一步是独立使用反馈、三分钟演示与发布准备。见 [快速开始](docs/quickstart.zh.md)、[三分钟演示](docs/demo-3min.zh.md)、[后续安排](docs/roadmap.zh.md)。
 
 License: [Apache-2.0](LICENSE).
