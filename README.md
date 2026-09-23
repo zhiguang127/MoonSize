@@ -45,7 +45,7 @@ CI 使用同版本的官方 Linux 工具链与 core，并校验固定 SHA-256。
 node bin/moonsize.mjs analyze app.wasm
 node bin/moonsize.mjs analyze app.wasm --json
 node bin/moonsize.mjs analyze app.wasm --why 42
-node bin/moonsize.mjs diff before.wasm after.wasm --compress --html report.html --summary summary.md
+node bin/moonsize.mjs diff before.wasm after.wasm --compress --html report.html --summary summary.md --json-file result.json
 node bin/moonsize.mjs diff before.wasm after.wasm --max-bytes 32000 --max-growth 30000 --json
 ```
 
@@ -59,7 +59,7 @@ node bin/moonsize.mjs diff before.wasm after.wasm --max-bytes 32000 --max-growth
 | 1 | 分析成功，但预算或构建条件策略失败 |
 | 2 | 参数、文件读取、结构解析或输出错误 |
 
-`--html` 可与 `--json` 同时使用，报告路径输出到 stderr，JSON 输出到 stdout。HTML、摘要与构建记录输出不能覆盖输入 Wasm、配置、记录或其他输出。`--summary` 追加 Markdown，可传入 GitHub 的 `$GITHUB_STEP_SUMMARY`。
+`--html` 可与 `--json` 同时使用，报告路径输出到 stderr，JSON 输出到 stdout。CI 可用 `--json-file` 直接写 JSON 文件；它与 HTML、摘要、构建记录一起检查输出路径，不能覆盖输入 Wasm、配置、记录或其他输出。`--summary` 追加 Markdown，可传入 GitHub 的 `$GITHUB_STEP_SUMMARY`。
 
 ## MoonBit API
 

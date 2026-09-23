@@ -34,7 +34,7 @@ jobs:
             --after-build reports/demo/after.build.json \
             --policy examples/ci-policy.json \
             --summary "$GITHUB_STEP_SUMMARY" \
-            --html reports/demo/report.html --json > reports/demo/ci-result.json
+            --html reports/demo/report.html --json-file reports/demo/ci-result.json
       - name: Reproduce pinned external cases and optimization
         run: python3 scripts/build-cases.py
       - name: Upload reports and fixture manifest

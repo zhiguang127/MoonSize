@@ -10,8 +10,8 @@ const limits = JSON.parse(limits_json());
 
 const usage = `MoonSize — inspect WebAssembly build sizes
 
-  node bin/moonsize.mjs analyze file.wasm [--json] [--html report.html]
-  node bin/moonsize.mjs diff before.wasm after.wasm [--json] [--html report.html]
+  node bin/moonsize.mjs analyze file.wasm [--json] [--json-file result.json] [--html report.html]
+  node bin/moonsize.mjs diff before.wasm after.wasm [--json] [--json-file result.json] [--html report.html]
       [--max-bytes N] [--max-growth N] [--why FUNCTION_INDEX]
       [--compress] [--policy policy.json] [--summary summary.md]
       [--before-build before.build.json] [--after-build after.build.json]
@@ -19,6 +19,7 @@ const usage = `MoonSize — inspect WebAssembly build sizes
 
 --compress measures whole-file gzip (level 9) and Brotli (quality 6).
 --summary appends Markdown, including failed policy checks, to the given file.
+--json-file writes JSON through the same output-path checks as HTML and summaries.
 --policy configures independent raw/gzip/brotli budgets and condition checks.
 Build records bind declared conditions to SHA-256; missing conditions remain unknown.
 
@@ -39,7 +40,7 @@ try {
     while (args.length) {
       const arg = args.shift();
       if (!arg.startsWith('--')) { inputs.push(arg); continue; }
-      if (!['--json','--html','--max-bytes','--max-growth','--why','--compress','--policy','--summary','--before-build','--after-build','--build-info','--output'].includes(arg)) throw new Error(`Unknown option: ${arg}`);
+      if (!['--json','--json-file','--html','--max-bytes','--max-growth','--why','--compress','--policy','--summary','--before-build','--after-build','--build-info','--output'].includes(arg)) throw new Error(`Unknown option: ${arg}`);
       if (options.has(arg)) throw new Error(`Duplicate option: ${arg}`);
       if (arg === '--json' || arg === '--compress') { options.set(arg, true); continue; }
       const value = args.shift();
@@ -47,7 +48,7 @@ try {
       options.set(arg, value);
     }
     if (inputs.length !== (command === 'diff' ? 2 : 1)) throw new Error(`Incorrect number of input files for ${command}`);
-    const permitted=command==='record' ? ['--build-info','--output'] : command==='analyze' ? ['--json','--html','--why','--compress','--summary','--after-build'] : ['--json','--html','--why','--compress','--summary','--before-build','--after-build','--max-bytes','--max-growth','--policy'];
+    const permitted=command==='record' ? ['--build-info','--output'] : command==='analyze' ? ['--json','--json-file','--html','--why','--compress','--summary','--after-build'] : ['--json','--json-file','--html','--why','--compress','--summary','--before-build','--after-build','--max-bytes','--max-growth','--policy'];
     for(const key of options.keys())if(!permitted.includes(key))throw new Error(`${key} is not supported by ${command}`);
     if(command==='record' && (!options.has('--build-info') || !options.has('--output')))throw new Error('record requires --build-info and --output');
     const hasBudget = options.has('--max-bytes') || options.has('--max-growth');
@@ -61,8 +62,15 @@ try {
     const maxBytes = limit('--max-bytes'), maxGrowth = limit('--max-growth');
     const why = limit('--why');
     const configInputs=['--policy','--before-build','--after-build','--build-info'].filter(key=>options.has(key)).map(key=>options.get(key));
-    const outputs=['--html','--summary','--output'].filter(key=>options.has(key)).map(key=>options.get(key));
+    const outputs=['--json-file','--html','--summary','--output'].filter(key=>options.has(key)).map(key=>options.get(key));
     await protectOutputs(outputs,[...inputs,...configInputs]);
+    const writeJsonFile=async value=>{
+      if(!options.has('--json-file'))return;
+      const output=path.resolve(options.get('--json-file'));
+      await mkdir(path.dirname(output),{recursive:true});
+      await writeFile(output,JSON.stringify(value,null,2)+'\n');
+      console.error(`JSON: ${output}`);
+    };
     const policy=parsePolicy(options.has('--policy') ? await readConfig(options.get('--policy')) : undefined);
     for(const [key,value] of [['max_bytes',maxBytes],['max_growth_bytes',maxGrowth]])if(value!==-1){
       policy.budgets.raw ??= {};
@@ -72,6 +80,7 @@ try {
     const data = await Promise.all(inputs.map(file=>readBounded(file,limits.max_input_bytes)));
     const result = JSON.parse(command !== 'diff' ? analyze_json(data[0]) : hasBudget ? budget_json(data[0],data[1],maxBytes,maxGrowth) : compare_json(data[0],data[1]));
     if (!result.ok) {
+      await writeJsonFile(result);
       if (options.has('--json')) console.log(JSON.stringify(result, null, 2));
       else console.error(`MoonSize: byte ${result.error.offset}: ${result.error.message}`);
       process.exitCode = 2;
@@ -97,6 +106,7 @@ try {
         result.explanation={function_index:why,...referencePath(current.references,why)};
       }
       const files = command === 'analyze' ? {input: inputs[0]} : {before: inputs[0], after: inputs[1]};
+      await writeJsonFile(result);
       if (options.has('--html')) {
         const output = path.resolve(options.get('--html'));
         await mkdir(path.dirname(output), {recursive:true});

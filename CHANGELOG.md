@@ -2,6 +2,8 @@
 
 ## 0.3.0 — unreleased
 
+- Add CLI `--json-file` so CI can save machine-readable results under output-path protection, including failed budget decisions and core parse errors; use it in the example workflow.
+
 - Add CLI `--compress` whole-file gzip/Brotli measurements with fixed settings and recorded runtime versions; share inclusive budget decisions through MoonBit `check_size_budget` / `size_budget_json`.
 - Add strict versioned policy files with independent raw/gzip/Brotli limits and optional build-condition requirements. Preserve raw budget compatibility while exposing a combined decision and exit status.
 - Bind declared build conditions to artifact SHA-256 using `record`; distinguish matching, differing and unknown conditions without treating source revisions as build parameters.

@@ -76,6 +76,25 @@ test('CLI records, verifies and enforces policies while writing failed JSON, HTM
   assert.equal((await readFile(summary,'utf8')).split('## MoonSize').length,3);
   await writeFile(ar,await readFile(br));r=cli(args);assert.equal(r.status,2);assert.match(JSON.parse(r.stdout).error.message,/SHA-256/);
 }));
+test('CLI writes protected JSON artifacts for passing, failed and invalid Wasm results',()=>temporary(async dir=>{
+  const before=path.join(dir,'before.wasm'),after=path.join(dir,'after.wasm'),json=path.join(dir,'result.json');
+  await Promise.all([writeFile(before,empty),writeFile(after,named)]);
+  let r=cli(['diff',before,after,'--max-bytes','8','--json-file',json]);
+  assert.equal(r.status,1,r.stderr);
+  assert.match(r.stdout,/Policy: fail/);
+  let result=JSON.parse(await readFile(json,'utf8'));
+  assert.equal(result.engineering.decision.status,'fail');
+  assert.equal(result.after.total_bytes,named.length);
+  r=cli(['analyze',before,'--json-file',json,'--json']);
+  assert.equal(r.status,0,r.stderr);
+  assert.deepEqual(JSON.parse(await readFile(json,'utf8')),JSON.parse(r.stdout));
+  await writeFile(after,Uint8Array.of(0,97,115,109,1,0,0,0,1));
+  r=cli(['analyze',after,'--json-file',json]);
+  assert.equal(r.status,2,r.stderr);
+  result=JSON.parse(await readFile(json,'utf8'));
+  assert.equal(result.ok,false);
+  assert.equal(result.error.code,'invalid_input');
+}));
 test('CLI strict comparability fails on absent conditions; configuration conflicts are input errors',()=>temporary(async dir=>{
   const file=path.join(dir,'input.wasm'),policy=path.join(dir,'policy.json');
   await writeFile(file,empty);await writeFile(policy,JSON.stringify({schema_version:1,require_comparable:true,budgets:{raw:{max_bytes:8}}}));
@@ -95,6 +114,9 @@ test('all output paths protect modules, configurations, hard links and one anoth
     const dangling=path.join(dir,'dangling');await symlink(summary,dangling);
     await assert.rejects(protectOutputs([summary,dangling],[input]),/another output/);
   }
+  r=cli(['analyze',input,'--json-file',input]);assert.equal(r.status,2);assert.deepEqual(new Uint8Array(await readFile(input)),empty);
+  r=cli(['analyze',input,'--json-file',alias]);assert.equal(r.status,2);assert.deepEqual(new Uint8Array(await readFile(input)),empty);
+  r=cli(['analyze',input,'--json-file',summary,'--html',summary]);assert.equal(r.status,2);await assert.rejects(readFile(summary),{code:'ENOENT'});
   const policy=path.join(dir,'policy.json');await writeFile(policy,'{"schema_version":1}');r=cli(['diff',input,input,'--policy',policy,'--summary',policy]);assert.equal(r.status,2);assert.equal(await readFile(policy,'utf8'),'{"schema_version":1}');
 }));
 test('JSON configuration has a strict bounded reader',()=>temporary(async dir=>{

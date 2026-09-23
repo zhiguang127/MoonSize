@@ -99,3 +99,13 @@ Linux x86_64，固定 MoonBit 工具链和 core 的下载文件通过仓库 SHA-
 本轮复用已有案例产物，没有重新运行全部外部上游测试或 2,887 组行为对照；相关证据属于前一轮。旧案例没有本轮格式的构建记录，比较器正确返回条件 `unknown`，不根据历史叙述补造记录。demo 新记录则为 `matching`。压缩测量不是实际网络流量或运行速度 benchmark。
 
 新工作流尚未推送到远端执行，包尚未发布，也尚无独立使用者反馈。工程接口与复现命令见 [CI 决策说明](engineering-ci.zh.md)。
+
+## 2026-09-23：CI JSON 输出迭代
+
+本地环境为 Linux x86_64、Node v22.22.1。复用此前生成的 MoonBit JS 核心与 demo Wasm；当前环境未安装 `moon`，因此本轮没有重建核心或运行四后端测试，`npm test` 所需的 Node 24 参数也不可用。
+
+- `node --test tests/integration.test.mjs tests/attribution.test.mjs tests/worker.test.mjs tests/engineering.test.mjs`：37 / 37 通过。新增检查覆盖 `--json-file` 的通过、预算失败、核心解析错误，以及输入文件 / 硬链接 / 其他输出路径冲突。
+- 现有 demo 产物按示例 CI 策略执行 `diff --json-file`：退出 0、策略 `pass`、构建条件 `matching`，JSON 记录 3,442 B → 31,519 B。
+- `git diff --check`：通过。
+
+本轮没有运行远端 Actions，也没有重新构建外部项目案例；这些仍是发布前的验证项。

@@ -15,7 +15,7 @@
 ```sh
 npm run build
 node bin/moonsize.mjs diff before.wasm after.wasm \
-  --compress --html report.html --summary summary.md --json > result.json
+  --compress --html report.html --summary summary.md --json-file result.json
 ```
 
 `--compress` 同时测量完整产物的 gzip 和 Brotli；`analyze` 也支持，此时 baseline 与 delta 为 `null`。两份文件在同一 Node 进程中重新压缩，不使用历史压缩大小。
@@ -46,7 +46,7 @@ JSON 记录参数与 Node、zlib、Brotli 运行库版本。这些是指定条�
 
 ```sh
 node bin/moonsize.mjs diff before.wasm after.wasm \
-  --policy policy.json --summary summary.md --html report.html --json > result.json
+  --policy policy.json --summary summary.md --html report.html --json-file result.json
 ```
 
 配置压缩预算自动启用两种压缩测量，无需重复传 `--compress`。预算是 0–2,147,483,647 的整数字节，边界包含、增长带符号；缩小可通过零增长预算。缺省字段表示不限制，显式 `null`、负数、空预算、未知键或版本都会报错。预算配置仅用于 `diff`。
@@ -117,7 +117,7 @@ node bin/moonsize.mjs diff before.wasm after.wasm \
       --after-build current/app.build.json \
       --policy moonsize-policy.json \
       --summary "$GITHUB_STEP_SUMMARY" \
-      --html moonsize-report.html --json > moonsize-result.json
+      --html moonsize-report.html --json-file moonsize-result.json
 - uses: actions/upload-artifact@v4
   if: always()
   with:
@@ -131,6 +131,6 @@ node bin/moonsize.mjs diff before.wasm after.wasm \
 
 仓库的 [CI 工作流](../.github/workflows/ci.yml) 使用 [示例策略](../examples/ci-policy.json)。`npm run demo` 构建 8 个真实产物，同时生成记录；依赖指纹按安装的 core 源码及包配置计算，忽略生成目录，实际工具链版本来自 `moon version --all`。其报告可直接离线打开。CI 示例预算只适用于 demo，不能直接视为业务项目标准。
 
-`--html` 覆盖报告文件，`--summary` 追加摘要，`record --output` 写入记录。所有输出先检查，不能覆盖输入模块、策略、构建记录或其他输出，包含已有符号链接和硬链接别名。shell 的 `> result.json` 重定向发生在 CLI 启动前，不受这层保护；务必选择独立路径。
+`--json-file` 覆盖 JSON 文件，`--html` 覆盖报告文件，`--summary` 追加摘要，`record --output` 写入记录。所有输出先检查，不能覆盖输入模块、策略、构建记录或其他输出，包含已有符号链接和硬链接别名。预算失败（退出 1）及核心解析失败（退出 2）仍写出 JSON；参数、文件读取或记录绑定等前置错误不保证生成 JSON。`--json` 继续输出到 stdout，可与 `--json-file` 并用。shell 的 `> result.json` 重定向发生在 CLI 启动前，不受路径保护，CI 应使用 `--json-file`。
 
 参考：[Node zlib API](https://nodejs.org/api/zlib.html)、[GitHub Job Summary](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands#adding-a-job-summary)。本轮不增加 retained size、推断函数匹配或 source map。
