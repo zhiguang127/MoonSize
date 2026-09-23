@@ -42,4 +42,4 @@ CLI 新增 `--json-file`，将 JSON 结果纳入现有输出路径检查；预�
 
 ## 2026-09-23：v0.3 交付实施
 
-M1 候选 CLI tarball 已在仓库外安装验证。M2 已用固定 MoonBit 与 Node 24.19.0 重建 CommonMark/TOML，生成 v0.3 构建记录、三项预算和故意超限证据；行为对照通过。M3 提供真实 PR 工作流模板，本地使用隔离的 MoonBit 构建覆盖五种结果。远端 Actions、独立开发者试用和正式发布继续按 [发布验收清单](release-checklist.zh.md) 跟踪。
+M1 候选 CLI tarball 已在仓库外安装验证。M2 已用固定 MoonBit 与 Node 24.19.0 重建 CommonMark/TOML，生成 v0.3 构建记录、三项预算和故意超限证据；行为对照通过。M3 提供真实 PR 工作流模板，本地使用隔离的 MoonBit 构建覆盖五种结果。候选提交 `8de4873` 的远端 Actions 已通过并上传证据；独立开发者试用和正式发布继续按 [发布验收清单](release-checklist.zh.md) 跟踪。

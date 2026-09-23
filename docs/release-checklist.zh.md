@@ -7,7 +7,7 @@
 - [x] CommonMark/TOML 上游重新构建与测试；CommonMark 2,887 组行为对照通过。
 - [x] CommonMark 构建记录匹配；raw/gzip/Brotli 三项预算通过，故意超限失败。
 - [x] PR 流程本地模拟覆盖条件匹配、超预算、条件不同、基准缺失和损坏产物。
-- [ ] 当前提交的 GitHub Actions 运行成功，并上传 demo、案例和候选包验证证据。
+- [x] 候选提交 `8de4873` 的 [GitHub Actions 运行 #35858906076](https://github.com/zhiguang127/MoonSize/actions/runs/35858906076) 成功；四后端、候选包、PR 本地流程、demo 与真实案例步骤均通过，上传 `moonsize-evidence`（3,265,501 B）。
 - [ ] 至少一位未参与实现的开发者按快速开始接入一个独立项目，记录遇到的问题与修复。
 - [ ] 在干净环境复验离线 HTML、中文/英文切换和实际 PR 工作流模板。
 - [ ] 确定正式 npm 包名与 Mooncakes 发布坐标，核对许可证、NOTICE、版本和 schema 兼容说明。

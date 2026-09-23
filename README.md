@@ -4,7 +4,7 @@
 
 分析 `.wasm` 的区段与函数体字节数，按包和唯一原始符号比较两次构建，追踪直接调用、函数引用和已知包含路径，并用体积预算检查增长。解析、比较、引用图与预算判断均由 MoonBit 实现；Node CLI 负责文件读取、固定参数压缩测量和报告；浏览器界面提供本地 raw 分析与展示。
 
-当前开发 **v0.3（候选包未发布，分析 JSON schema 3）**，包含 L2 / L3、CI Job Summary、构建条件记录及独立 gzip / Brotli 预算，尚未发布到 Mooncakes 或 npm。新增 MoonBit 符号反修饰、可取消 Worker、统一资源限制，以及 CommonMark / TOML 两个外部项目案例。当前核心已在 JS、Wasm、Wasm-GC、Native 四个后端通过本地测试；远端成功记录属于此前 v0.2，v0.3 尚未远端运行。见 [验证记录](docs/validation.md)。
+当前开发 **v0.3（候选包未发布，分析 JSON schema 3）**，包含 L2 / L3、CI Job Summary、构建条件记录及独立 gzip / Brotli 预算，尚未发布到 Mooncakes 或 npm。新增 MoonBit 符号反修饰、可取消 Worker、统一资源限制，以及 CommonMark / TOML 两个外部项目案例。当前核心已在 JS、Wasm、Wasm-GC、Native 四个后端通过本地测试；v0.3 候选分支已在 GitHub Actions 完成固定工具链测试、真实案例复现与证据上传。见 [验证记录](docs/validation.md)。
 
 CommonMark 的一次源码改动，在相同编译参数下将产物从 **679,991 B 降至 617,546 B（−9.18%）**；两边都 strip 后仍减少 22,983 B。2,887 组输入在前后版本、Wasm-GC 与 JS 上输出一致。见 [案例与复现说明](docs/cases.zh.md)。
 
@@ -39,7 +39,7 @@ python3 scripts/build-cases.py
 npm run serve
 ```
 
-CI 使用同版本的官方 Linux 工具链与 core，并校验固定 SHA-256。2026-09-14，GitHub Actions 在 Ubuntu 24.04 上对提交 `4e10ce1` 成功运行并上传 `moonsize-evidence`；见 [Actions 页面](https://github.com/zhiguang127/MoonSize/actions)。
+CI 使用同版本的官方 Linux 工具链与 core，并校验固定 SHA-256。2026-09-14，v0.2 的提交 `4e10ce1` 在 Ubuntu 24.04 上通过；v0.3 候选提交 `8de4873` 也已通过并上传 `moonsize-evidence`。见 [v0.3 Actions 运行](https://github.com/zhiguang127/MoonSize/actions/runs/35858906076)。
 
 ## 命令行
 

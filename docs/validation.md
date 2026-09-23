@@ -118,6 +118,10 @@ Linux x86_64，固定 MoonBit 工具链和 core 的下载文件通过仓库 SHA-
 - `npm run demo` 生成 8 个通过引擎验证的产物。`npm run package:check` 从 tarball 在仓库外安装，验证帮助、版本、分析、比较、记录与退出 0/1/2。
 - `npm run pr:check` 使用两个隔离的真实 MoonBit 项目构建，验证条件匹配、超预算、条件差异、缺少基准与损坏产物。
 - `python3 scripts/build-cases.py` 重新构建固定 CommonMark/TOML 案例及上游测试；CommonMark 2,887 组行为对照通过。实际构建时生成的记录具有相同依赖指纹；CLI 策略 `pass`、故意超限 `fail`。raw −62,445 B、gzip −12,035 B、Brotli −8,751 B。
-- 本地候选包 `dist/moonsize-local-0.3.0.tgz` 的 SHA-256 为 `710101c05dae6a11de64e361df8ce48d406aab27b4332f4ef866c16d2fb37cc4`。产物为本机打包候选，尚未发布。
+- 本地候选包 `dist/moonsize-local-0.3.0.tgz` 的 SHA-256 为 `ac3fca6de86bd5371ba246576de2b45b885b20eb58c32c30023a84a2e17f4a8d`。产物为本机打包候选，尚未发布。
 
 远端 Actions 和独立项目试用仍需当前代码的证据；正式发布状态见 [验收清单](release-checklist.zh.md)。
+
+### 远端 Actions（候选提交 `8de4873`）
+
+[运行 #35858906076](https://github.com/zhiguang127/MoonSize/actions/runs/35858906076) 在 Ubuntu 24.04 上完成，结论 `success`。安装固定 MoonBit/core、四后端测试、CLI 与候选包检查、demo 策略、CommonMark/TOML 复现和 artifact 上传各步骤均成功；`moonsize-evidence` 大小为 3,265,501 B。此证据属于候选分支，未代表正式包已发布。
