@@ -73,3 +73,15 @@ cd D:\MoonSize
 - CommonMark 前 / 后图分别记录 2,629 / 2,613 条已知引用，各有 52 个未解析动态调用；TOML 871 个函数体全部解码，记录 11,074 条已知引用和 57 个未解析动态调用。三者及 stripped CommonMark 均无引用解码问题；有动态调用的图状态保持 `partial`。
 
 统计写入生成的 `manifest.json` 和 `*.wasm.json`；完整 L2 数据保存在 `cmark-diff.json`。这次本地验证不代表新代码已通过远端 CI。
+
+## v0.3 工程验收（2026-09-23）
+
+同一固定工具链重新构建两个上游案例时，脚本现在为每个 Wasm 生成 SHA-256 绑定记录；CommonMark 优化前记录上游提交，优化后记录同一提交及补丁摘要。依赖指纹来自本次已安装的 core 和 `.mooncakes` 源文件。CLI 以 raw/gzip/Brotli 各 0 B 增长上限比较两侧，构建条件为 `matching`，综合策略为 `pass`；另用 0 B 总量上限生成预期 `fail` 结果。`reports/cases/cmark-ci.json`、`cmark-summary.md` 和离线 HTML 保留完整证据。TOML 的独立分析也附构建记录和压缩测量。
+
+| 指标 | Before | After | 变化 |
+| --- | ---: | ---: | ---: |
+| raw | 679,991 B | 617,546 B | −62,445 B |
+| gzip | 186,566 B | 174,531 B | −12,035 B |
+| Brotli | 157,694 B | 148,943 B | −8,751 B |
+
+前后 2,887 组输入在 Wasm-GC 和 JS 上输出一致；这一结论只覆盖固定语料。见 [工程策略说明](engineering-ci.zh.md)。

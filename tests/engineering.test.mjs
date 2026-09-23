@@ -94,6 +94,19 @@ test('CLI writes protected JSON artifacts for passing, failed and invalid Wasm r
   result=JSON.parse(await readFile(json,'utf8'));
   assert.equal(result.ok,false);
   assert.equal(result.error.code,'invalid_input');
+  await writeFile(json,JSON.stringify({ok:true,stale:true}));
+  r=cli(['analyze',path.join(dir,'missing.wasm'),'--json-file',json]);
+  assert.equal(r.status,2,r.stderr);
+  result=JSON.parse(await readFile(json,'utf8'));
+  assert.equal(result.ok,false);
+  assert.match(result.error.message,/ENOENT/);
+  await writeFile(after,named);
+  const record=path.join(dir,'wrong.build.json');
+  await writeFile(record,JSON.stringify(createBuildRecord(empty,info)));
+  await writeFile(json,JSON.stringify({ok:true,stale:true}));
+  r=cli(['analyze',after,'--after-build',record,'--json-file',json]);
+  assert.equal(r.status,2,r.stderr);
+  assert.equal(JSON.parse(await readFile(json,'utf8')).ok,false);
 }));
 test('CLI strict comparability fails on absent conditions; configuration conflicts are input errors',()=>temporary(async dir=>{
   const file=path.join(dir,'input.wasm'),policy=path.join(dir,'policy.json');

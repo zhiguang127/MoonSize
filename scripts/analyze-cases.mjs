@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import {readFile,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
+import {capture} from './process.mjs';
 import {analyze_json,compare_json} from '../_build/js/release/build/moonsize.js';
-import {renderReport} from '../ui/report.mjs';
 const dir=new URL('../reports/cases/',import.meta.url);
 const upstream=new URL('../.local/real-cases/upstream/cmark/',import.meta.url);
 const sha=data=>createHash('sha256').update(data).digest('hex');
@@ -31,8 +32,6 @@ const diff=JSON.parse(compare_json(before.data,after.data));assert.ok(diff.ok);
 assert.equal(diff.comparison.packages.reduce((n,p)=>n+p.before_bytes,0),diff.comparison.matching.before.total_bytes);
 assert.equal(diff.comparison.packages.reduce((n,p)=>n+p.after_bytes,0),diff.comparison.matching.after.total_bytes);
 await writeFile(new URL('cmark-diff.json',dir),JSON.stringify(diff,null,2)+'\n');
-await writeFile(new URL('cmark-report.html',dir),renderReport(diff,{before:'cmark-before.wasm',after:'cmark-after.wasm'}));
-await writeFile(new URL('toml-report.html',dir),renderReport(toml.result,{input:'toml-cli.wasm'}));
 const modules=await Promise.all(['before','after'].map(async stage=>{
   const data=await readFile(new URL(`cmark-${stage}.wasm`,dir));
   const {instance}=await WebAssembly.instantiate(data,{}, {builtins:['js-string'],importedStringConstants:'_'});
@@ -57,6 +56,29 @@ for(const [index,input] of inputs.entries()){
 }
 assert.ok(after.data.length<before.data.length,'This optimization must show measured savings');
 assert.ok(strippedAfter.data.length<strippedBefore.data.length,'Savings must remain after stripping metadata');
-const manifest={toolchain:(await readFile(new URL('toolchain.log',dir),'utf8')).trim(),artifacts:[before.stats,after.stats,strippedBefore.stats,strippedAfter.stats,toml.stats],optimization:{delta_bytes:after.data.length-before.data.length,saved_percent:(before.data.length-after.data.length)*100/before.data.length,code_delta_bytes:diff.comparison.sections.find(s=>s.id===10).delta_bytes,stripped:{before_bytes:strippedBefore.data.length,after_bytes:strippedAfter.data.length,delta_bytes:strippedAfter.data.length-strippedBefore.data.length},section_deltas:diff.comparison.sections,behavior:{inputs:inputs.length,commonmark_examples:examples.length,entity_spellings:Object.keys(entities).length,targets:['wasm-gc','js'],all_outputs_equal:true,corpus_and_output_sha256:digest.digest('hex')}}};
+const caseFile=name=>fileURLToPath(new URL(name,dir));
+const runCli=(args,expected)=>{
+  const result=capture(process.execPath,['bin/moonsize.mjs',...args],{cwd:fileURLToPath(new URL('../',import.meta.url))});
+  assert.equal(result.status,expected,result.stderr||result.stdout);
+};
+const beforeFile=caseFile('cmark-before.wasm'),afterFile=caseFile('cmark-after.wasm');
+const records=['--before-build',caseFile('cmark-before.wasm.build.json'),'--after-build',caseFile('cmark-after.wasm.build.json')];
+const policy=fileURLToPath(new URL('../examples/cmark-policy.json',import.meta.url));
+await writeFile(new URL('cmark-summary.md',dir),'');
+runCli(['diff',beforeFile,afterFile,...records,'--policy',policy,
+  '--json-file',caseFile('cmark-ci.json'),'--html',caseFile('cmark-report.html'),
+  '--summary',caseFile('cmark-summary.md')],0);
+const engineering=JSON.parse(await readFile(new URL('cmark-ci.json',dir),'utf8')).engineering;
+assert.equal(engineering.provenance.comparability.status,'matching');
+assert.equal(engineering.decision.status,'pass');
+for(const metric of ['raw','gzip','brotli'])assert.ok(engineering.delivery.metrics[metric].delta_bytes<0);
+await writeFile(new URL('cmark-policy-fail-summary.md',dir),'');
+runCli(['diff',beforeFile,afterFile,...records,'--policy',policy,'--max-bytes','0',
+  '--json-file',caseFile('cmark-policy-fail.json'),'--summary',caseFile('cmark-policy-fail-summary.md')],1);
+const failed=JSON.parse(await readFile(new URL('cmark-policy-fail.json',dir),'utf8'));
+assert.equal(failed.engineering.decision.status,'fail');
+runCli(['analyze',caseFile('toml-cli.wasm'),'--compress','--after-build',caseFile('toml-cli.wasm.build.json'),
+  '--json-file',caseFile('toml-ci.json'),'--html',caseFile('toml-report.html')],0);
+const manifest={toolchain:(await readFile(new URL('toolchain.log',dir),'utf8')).trim(),engineering:{decision:engineering.decision.status,comparability:engineering.provenance.comparability.status,metrics:engineering.delivery.metrics,forced_failure:failed.engineering.decision.status},artifacts:[before.stats,after.stats,strippedBefore.stats,strippedAfter.stats,toml.stats],optimization:{delta_bytes:after.data.length-before.data.length,saved_percent:(before.data.length-after.data.length)*100/before.data.length,code_delta_bytes:diff.comparison.sections.find(s=>s.id===10).delta_bytes,stripped:{before_bytes:strippedBefore.data.length,after_bytes:strippedAfter.data.length,delta_bytes:strippedAfter.data.length-strippedBefore.data.length},section_deltas:diff.comparison.sections,behavior:{inputs:inputs.length,commonmark_examples:examples.length,entity_spellings:Object.keys(entities).length,targets:['wasm-gc','js'],all_outputs_equal:true,corpus_and_output_sha256:digest.digest('hex')}}};
 await writeFile(new URL('manifest.json',dir),JSON.stringify(manifest,null,2)+'\n');
 console.log(JSON.stringify(manifest,null,2));

@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '24.19.0'
       - name: Install pinned MoonBit and core
         run: |
           export MOON_HOME="$RUNNER_TEMP/moonsize-toolchain"
@@ -27,6 +27,11 @@ jobs:
         run: |
           npm test
           npm run demo
+          npm run package:check
+          npm run pr:check
+          mkdir -p dist
+          npm pack --pack-destination dist
+          sha256sum dist/*.tgz > dist/SHA256SUMS
       - name: Size policy and Job Summary
         run: |
           node bin/moonsize.mjs diff reports/demo/before.wasm reports/demo/after.wasm \
@@ -47,3 +52,4 @@ jobs:
             reports/demo/*.html
             reports/demo/*.json
             reports/cases/
+            dist/

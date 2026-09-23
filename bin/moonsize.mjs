@@ -1,12 +1,18 @@
 #!/usr/bin/env node
-import { writeFile, appendFile, mkdir } from 'node:fs/promises';
+import { writeFile, appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { analyze_json, budget_json, compare_json, limits_json } from '../_build/js/release/build/moonsize.js';
 import { bytes, signed, renderReport } from '../ui/report.mjs';
 import {referencePath} from '../ui/reference-view.mjs';
-import {readBounded,readConfig,parsePolicy,createBuildRecord,verifyBuildRecord,compareBuilds,measureSizes,evaluatePolicy,protectOutputs} from '../lib/engineering.mjs';
+import {atomicWriteJson} from '../lib/output.mjs';
 import {renderSummary} from '../lib/summary.mjs';
-const limits = JSON.parse(limits_json());
+const version=JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8')).version;
+let jsonOutput=null;
+async function writeJsonFile(value){
+  if(!jsonOutput)return;
+  try{await atomicWriteJson(jsonOutput,value);}
+  catch(error){jsonOutput=null;throw error;}
+  console.error(`JSON: ${jsonOutput}`);
+}
 
 const usage = `MoonSize — inspect WebAssembly build sizes
 
@@ -32,6 +38,8 @@ try {
   const args = process.argv.slice(2);
   if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
     console.log(usage);
+  } else if(args.length===1 && ['--version','-v'].includes(args[0])){
+    console.log(version);
   } else {
     const command = args.shift();
     if (!['analyze','diff','record'].includes(command)) throw new Error('Expected analyze, diff or record. Use --help.');
@@ -61,16 +69,13 @@ try {
     };
     const maxBytes = limit('--max-bytes'), maxGrowth = limit('--max-growth');
     const why = limit('--why');
+    const {analyze_json,budget_json,compare_json,limits_json}=await import('../_build/js/release/build/moonsize.js');
+    const {readBounded,readConfig,parsePolicy,createBuildRecord,verifyBuildRecord,compareBuilds,measureSizes,evaluatePolicy,protectOutputs}=await import('../lib/engineering.mjs');
+    const limits=JSON.parse(limits_json());
     const configInputs=['--policy','--before-build','--after-build','--build-info'].filter(key=>options.has(key)).map(key=>options.get(key));
     const outputs=['--json-file','--html','--summary','--output'].filter(key=>options.has(key)).map(key=>options.get(key));
     await protectOutputs(outputs,[...inputs,...configInputs]);
-    const writeJsonFile=async value=>{
-      if(!options.has('--json-file'))return;
-      const output=path.resolve(options.get('--json-file'));
-      await mkdir(path.dirname(output),{recursive:true});
-      await writeFile(output,JSON.stringify(value,null,2)+'\n');
-      console.error(`JSON: ${output}`);
-    };
+    jsonOutput=options.has('--json-file')?path.resolve(options.get('--json-file')):null;
     const policy=parsePolicy(options.has('--policy') ? await readConfig(options.get('--policy')) : undefined);
     for(const [key,value] of [['max_bytes',maxBytes],['max_growth_bytes',maxGrowth]])if(value!==-1){
       policy.budgets.raw ??= {};
@@ -194,7 +199,12 @@ try {
     }
   }
 } catch (error) {
-  if(process.argv.includes('--json'))console.log(JSON.stringify({ok:false,error:{code:'invalid_input',offset:0,message:error.message}},null,2));
+  const response={ok:false,error:{code:'invalid_input',offset:0,message:error.message}};
+  if(jsonOutput){
+    try{await writeJsonFile(response);}
+    catch(writeError){console.error(`MoonSize: could not write JSON error: ${writeError.message}`);}
+  }
+  if(process.argv.includes('--json'))console.log(JSON.stringify(response,null,2));
   else console.error(`MoonSize: ${error.message}`);
   process.exitCode = 2;
 }

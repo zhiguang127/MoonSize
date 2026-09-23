@@ -1,0 +1,69 @@
+# Copy to .github/workflows/moonsize.yml in a MoonBit project after v0.3 is tagged.
+# Provide scripts/moonsize-build.sh in the project as described in docs/pr-ci.zh.md.
+name: Wasm size regression
+on: pull_request
+permissions:
+  contents: read
+jobs:
+  size:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: zhiguang127/MoonSize
+          ref: v0.3.0
+          path: tool
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: baseline
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: current
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Install pinned MoonBit and build MoonSize
+        run: |
+          export MOON_HOME="$RUNNER_TEMP/moonsize-toolchain"
+          echo "MOON_HOME=$MOON_HOME" >> "$GITHUB_ENV"
+          bash tool/scripts/setup-ci.sh
+          echo "$MOON_HOME/bin" >> "$GITHUB_PATH"
+          "$MOON_HOME/bin/moon" -C tool build --target js --release --deny-warn
+      - name: Build baseline and current artifacts
+        run: |
+          mkdir -p "$RUNNER_TEMP/moonsize/baseline" "$RUNNER_TEMP/moonsize/current"
+          (cd baseline && MOON_HOME="$MOON_HOME" MOONSIZE_OUTPUT_DIR="$RUNNER_TEMP/moonsize/baseline" bash scripts/moonsize-build.sh)
+          (cd current && MOON_HOME="$MOON_HOME" MOONSIZE_OUTPUT_DIR="$RUNNER_TEMP/moonsize/current" bash scripts/moonsize-build.sh)
+          for side in baseline current; do
+            test -s "$RUNNER_TEMP/moonsize/$side/app.wasm" || { echo "::error::$side app.wasm missing"; exit 2; }
+          done
+          node tool/scripts/write-build-info.mjs --project baseline --target wasm-gc --strip false \
+            --source-revision "${{ github.event.pull_request.base.sha }}" \
+            --output "$RUNNER_TEMP/moonsize/baseline/info.json" --flag --no-strip
+          node tool/scripts/write-build-info.mjs --project current --target wasm-gc --strip false \
+            --source-revision "${{ github.event.pull_request.head.sha }}" \
+            --output "$RUNNER_TEMP/moonsize/current/info.json" --flag --no-strip
+      - name: Compare size
+        run: |
+          mkdir -p size-report
+          node tool/bin/moonsize.mjs record "$RUNNER_TEMP/moonsize/baseline/app.wasm" \
+            --build-info "$RUNNER_TEMP/moonsize/baseline/info.json" --output size-report/baseline.build.json
+          node tool/bin/moonsize.mjs record "$RUNNER_TEMP/moonsize/current/app.wasm" \
+            --build-info "$RUNNER_TEMP/moonsize/current/info.json" --output size-report/current.build.json
+          node tool/bin/moonsize.mjs diff "$RUNNER_TEMP/moonsize/baseline/app.wasm" "$RUNNER_TEMP/moonsize/current/app.wasm" \
+            --before-build size-report/baseline.build.json --after-build size-report/current.build.json \
+            --policy baseline/moonsize-policy.json --json-file size-report/result.json \
+            --html size-report/report.html --summary "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: moonsize-pr-report
+          path: |
+            size-report/
+            ${{ runner.temp }}/moonsize/baseline/app.wasm
+            ${{ runner.temp }}/moonsize/current/app.wasm
